@@ -1,0 +1,9 @@
+{
+  "name": "chi-bill-bot",
+  "version": "0.0.1",
+  "description": "",
+  "dependencies": {},
+  "devDependencies": {
+    "serverless-dotenv-plugin": "^2.1.1"
+  }
+}

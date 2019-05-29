@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -55,13 +54,13 @@ type OCDResponse struct {
 }
 
 type Bill struct {
-	PK          uint          `gorm:"primary_key"`
-	TweetID     sql.NullInt64 `json:"tweet_id"`
-	TweetText   string        `gorm:"size:300" json:"tweet_text"`
-	LastTweetID sql.NullInt64 `json:"last_tweet_id"`
-	BillID      string        `gorm:"size:25" json:"id,omitempty"`
-	Active      bool          `gorm:"default:true"`
-	Data        string        `gorm:"type:text"`
+	PK          uint   `gorm:"primary_key"`
+	TweetID     *int64 `json:"tweet_id,omitempty"`
+	TweetText   string `gorm:"size:300" json:"tweet_text"`
+	LastTweetID *int64 `json:"last_tweet_id,omitempty"`
+	BillID      string `gorm:"size:25" json:"id,omitempty"`
+	Active      bool   `gorm:"default:true"`
+	Data        string `gorm:"type:text"`
 	NextRun     *time.Time
 }
 

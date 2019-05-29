@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"testing"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/mocks"
@@ -19,9 +18,10 @@ func TestHandleTweetExits(t *testing.T) {
 	twitterMock := new(mocks.TwitterMock)
 	snsMock := new(mocks.SNSClientMock)
 	var bill models.Bill
+	var tweetId int64 = 1234
 	bill = models.Bill{
 		BillID:    "O20101",
-		TweetID:   sql.NullInt64{Int64: 1234},
+		TweetID:   &tweetId,
 		TweetText: "O20101",
 	}
 	dbMock.ExpectQuery("SELECT (.+) FROM (.+) WHERE (.+) LIMIT 1").
@@ -42,8 +42,9 @@ func TestHandleTweetEmptyBillID(t *testing.T) {
 	twitterMock := new(mocks.TwitterMock)
 	snsMock := new(mocks.SNSClientMock)
 	var bill models.Bill
+	var tweetId int64 = 1
 	bill = models.Bill{
-		TweetID:   sql.NullInt64{Int64: 1},
+		TweetID:   &tweetId,
 		TweetText: "",
 	}
 	dbMock.ExpectQuery("SELECT (.+) FROM (.+) WHERE (.+) LIMIT 1").

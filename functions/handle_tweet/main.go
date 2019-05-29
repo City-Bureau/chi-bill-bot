@@ -30,7 +30,7 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, twttr svc.Twitter, snsClient sv
 		db.Save(&bill)
 		twttr.PostTweet(
 			"Couldn't parse a bill identifier from the tweet",
-			&twitter.StatusUpdateParams{InReplyToStatusID: bill.TweetID.Int64},
+			&twitter.StatusUpdateParams{InReplyToStatusID: *bill.TweetID},
 		)
 		return nil
 	}
@@ -44,7 +44,7 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, twttr svc.Twitter, snsClient sv
 			bill.Active = false
 			twttr.PostTweet(
 				"Valid bill not found",
-				&twitter.StatusUpdateParams{InReplyToStatusID: bill.TweetID.Int64},
+				&twitter.StatusUpdateParams{InReplyToStatusID: *bill.TweetID},
 			)
 			db.Save(&bill)
 			return nil
@@ -55,7 +55,7 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, twttr svc.Twitter, snsClient sv
 		// Tweet that the new bill is now being tracked, save
 		twttr.PostTweet(
 			fmt.Sprintf("Bill now being tracked, you can follow with #%s", bill.BillID),
-			&twitter.StatusUpdateParams{InReplyToStatusID: bill.TweetID.Int64},
+			&twitter.StatusUpdateParams{InReplyToStatusID: *bill.TweetID},
 		)
 		db.Save(&bill)
 	} else {
@@ -63,7 +63,7 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, twttr svc.Twitter, snsClient sv
 		existingBill.LastTweetID = bill.LastTweetID
 		twttr.PostTweet(
 			fmt.Sprintf("Bill now being tracked, you can follow with #%s", bill.BillID),
-			&twitter.StatusUpdateParams{InReplyToStatusID: bill.TweetID.Int64},
+			&twitter.StatusUpdateParams{InReplyToStatusID: *bill.TweetID},
 		)
 		db.Save(&existingBill)
 	}

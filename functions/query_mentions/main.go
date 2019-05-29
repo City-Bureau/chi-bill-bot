@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -21,7 +20,7 @@ func QueryMentions(db *gorm.DB, twttr svc.Twitter, snsClient svc.SNSType) error 
 	var bill models.Bill
 
 	db.Order("last_tweet_id desc").First(&bill)
-	tweets, err := twttr.GetMentions(&twitter.MentionTimelineParams{SinceID: bill.LastTweetID.Int64})
+	tweets, err := twttr.GetMentions(&twitter.MentionTimelineParams{SinceID: *bill.LastTweetID})
 
 	if err != nil {
 		log.Fatal(err)
@@ -33,9 +32,9 @@ func QueryMentions(db *gorm.DB, twttr svc.Twitter, snsClient svc.SNSType) error 
 	// Iterate through mentions, publishing each to SNS topic
 	for _, tweet := range tweets {
 		tweetBill := &models.Bill{
-			TweetID:     sql.NullInt64{Int64: tweet.ID, Valid: true},
+			TweetID:     &tweet.ID,
 			TweetText:   tweet.FullText,
-			LastTweetID: sql.NullInt64{Int64: lastTweetId, Valid: true},
+			LastTweetID: &lastTweetId,
 		}
 		tweetBillJson, _ := json.Marshal(tweetBill)
 

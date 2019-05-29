@@ -1,2 +1,196 @@
+service: chi-bill-bot
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: prod
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - SNS:Publish
+      Resource: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
+
+package:
+  exclude:
+    - ./**
+  include:
+    - ./bin/**
+
 plugins:
   - serverless-dotenv-plugin
+  - serverless-plugin-aws-alerts
+
+custom:
+  dispatchTopic: ${self:service}-dispatch
+  AURORA:
+    DB_NAME: ${env:RDS_DB_NAME}
+    USERNAME: ${env:RDS_USERNAME}
+    PASSWORD: ${env:RDS_PASSWORD}
+    HOST:
+      Fn::GetAtt: [AuroraRDSCluster, Endpoint.Address]
+    PORT:
+      Fn::GetAtt: [AuroraRDSCluster, Endpoint.Port]
+    VPC_CIDR: '10'
+  alerts:
+    stages:
+      - prod
+    alarms:
+      - functionErrors
+    topics:
+      alarm:
+        topic: ${self:service}-prod-alerts-alarm
+        notifications:
+          - protocol: email
+            endpoint: ${env:SNS_EMAIL}
+
+functions:
+  migrate:
+    handler: bin/migrate
+    timeout: 900
+    environment:
+      RDS_HOST: ${self:custom.AURORA.HOST}
+    alarms:
+      - functionErrors
+    vpc:
+      securityGroupIds:
+        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
+      subnetIds:
+        - Ref: ServerlessSubnetA
+        - Ref: ServerlessSubnetB
+        - Ref: ServerlessSubnetC
+  query_bills:
+    handler: bin/query_bills
+    timeout: 900
+    environment:
+      SNS_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
+      RDS_HOST: ${self:custom.AURORA.HOST}
+    alarms:
+      - functionErrors
+    vpc:
+      securityGroupIds:
+        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
+      subnetIds:
+        - Ref: ServerlessSubnetA
+        - Ref: ServerlessSubnetB
+        - Ref: ServerlessSubnetC
+    events:
+      - schedule: cron(0,30 * * * *)
+  handle_bill:
+    handler: bin/handle_bill
+    timeout: 900
+    environment:
+      SNS_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
+      RDS_HOST: ${self:custom.AURORA.HOST}
+    alarms:
+      - functionErrors
+    vpc:
+      securityGroupIds:
+        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
+      subnetIds:
+        - Ref: ServerlessSubnetA
+        - Ref: ServerlessSubnetB
+        - Ref: ServerlessSubnetC
+    events:
+      - sns:
+          topicName: ${self:custom.dispatchTopic}
+          displayName: ${self:custom.dispatchTopic}
+          filterPolicy:
+            feed:
+              - bills
+  query_mentions:
+    handler: bin/query_mentions
+    timeout: 900
+    environment:
+      SNS_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
+      RDS_HOST: ${self:custom.AURORA.HOST}
+    alarms:
+      - functionErrors
+    vpc:
+      securityGroupIds:
+        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
+      subnetIds:
+        - Ref: ServerlessSubnetA
+        - Ref: ServerlessSubnetB
+        - Ref: ServerlessSubnetC
+    events:
+      - schedule: cron(0,30 * * * *)
+  handle_tweet:
+    handler: bin/handle_tweet
+    timeout: 900
+    environment:
+      SNS_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
+      RDS_HOST: ${self:custom.AURORA.HOST}
+    alarms:
+      - functionErrors
+    vpc:
+      securityGroupIds:
+        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
+      subnetIds:
+        - Ref: ServerlessSubnetA
+        - Ref: ServerlessSubnetB
+        - Ref: ServerlessSubnetC
+    events:
+      - sns:
+          topicName: ${self:custom.dispatchTopic}
+          displayName: ${self:custom.dispatchTopic}
+          filterPolicy:
+            feed:
+              - tweets
+
+resources:
+  Resources:
+    # VPC config
+    ServerlessVPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.0.0/16'
+        EnableDnsSupport: true
+        EnableDnsHostnames: true
+        InstanceTenancy: default
+    ServerlessSubnetA:
+      DependsOn: ServerlessVPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: ServerlessVPC
+        AvailabilityZone: ${self:provider.region}a
+        CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.0.0/24'
+    ServerlessSubnetB:
+      DependsOn: ServerlessVPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: ServerlessVPC
+        AvailabilityZone: ${self:provider.region}b
+        CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.1.0/24'
+    ServerlessSubnetC:
+      DependsOn: ServerlessVPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: ServerlessVPC
+        AvailabilityZone: ${self:provider.region}c
+        CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.2.0/24'
+    # Aurora DB config
+    AuroraSubnetGroup:
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupDescription: "Aurora Subnet Group"
+        SubnetIds:
+          - Ref: ServerlessSubnetA
+          - Ref: ServerlessSubnetB
+          - Ref: ServerlessSubnetC
+    AuroraRDSCluster:
+      Type: "AWS::RDS::DBCluster"
+      Properties:
+        MasterUsername: ${self:custom.AURORA.USERNAME}
+        MasterUserPassword: ${self:custom.AURORA.PASSWORD}
+        DBSubnetGroupName:
+          Ref: AuroraSubnetGroup
+        Engine: aurora
+        EngineMode: serverless
+        EngineVersion: "5.6"
+        DatabaseName: ${self:custom.AURORA.DB_NAME}
+        BackupRetentionPeriod: 3
+        VpcSecurityGroupIds:
+          - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup

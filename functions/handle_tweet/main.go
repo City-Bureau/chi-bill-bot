@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
@@ -16,9 +15,8 @@ import (
 )
 
 func HandleTweet(bill *models.Bill, db *gorm.DB, twttr svc.Twitter, snsClient svc.SNSType) error {
-	now := time.Now()
 	bill.BillID = bill.ParseBillID(bill.TweetText)
-	bill.NextRun = &now
+	bill.SetNextRun()
 
 	var billForTweet models.Bill
 
@@ -77,11 +75,17 @@ func handler(request events.SNSEvent) error {
 		return nil
 	}
 	message := request.Records[0].SNS.Message
-	db, err := gorm.Open("mysql", "CONN")
+	db, err := gorm.Open("mysql", fmt.Sprintf(
+		"%s:%s@tcp(%s:3306)/%s",
+		os.Getenv("RDS_USERNAME"),
+		os.Getenv("RDS_PASSWORD"),
+		os.Getenv("RDS_HOST"),
+		os.Getenv("RDS_DB_NAME"),
+	))
 	snsClient := svc.NewSNSClient()
 	if err != nil {
 		// Re-publish message if DB error to retry
-		snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"))
+		snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"), "tweets")
 		panic(err)
 	}
 	defer db.Close()

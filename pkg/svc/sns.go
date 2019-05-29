@@ -7,7 +7,7 @@ import (
 )
 
 type SNSType interface {
-	Publish(string, string) error
+	Publish(string, string, string) error
 }
 
 type SNSClient struct {
@@ -19,10 +19,16 @@ func NewSNSClient() *SNSClient {
 	return &SNSClient{Client: client}
 }
 
-func (c *SNSClient) Publish(message string, topicArn string) error {
+func (c *SNSClient) Publish(message string, topicArn string, feed string) error {
 	_, err := c.Client.Publish(&sns.PublishInput{
 		Message:  aws.String(message),
 		TopicArn: aws.String(topicArn),
+		MessageAttributes: map[string]*sns.MessageAttributeValue{
+			"feed": &sns.MessageAttributeValue{
+				DataType:    aws.String("String"),
+				StringValue: aws.String(feed),
+			},
+		},
 	})
 	return err
 }

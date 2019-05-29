@@ -8,7 +8,7 @@ type SNSClientMock struct {
 	mock.Mock
 }
 
-func (m *SNSClientMock) Publish(message string, topicArn string) error {
-	m.Called(message, topicArn)
+func (m *SNSClientMock) Publish(message string, topicArn string, feed string) error {
+	m.Called(message, topicArn, feed)
 	return nil
 }

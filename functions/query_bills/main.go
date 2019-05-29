@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -16,9 +17,9 @@ import (
 
 func QueryBills(db *gorm.DB, snsClient svc.SNSType) error {
 	var bills []models.Bill
-	db.Limit(10).Find(
+	db.Limit(5).Find(
 		&bills,
-		"active = true AND next_run <= ? AND bill_id != '' AND bill_id IS NOT NULL",
+		"active = true AND next_run <= ? AND bill_id IS NOT NULL",
 		time.Now(),
 	)
 
@@ -28,23 +29,29 @@ func QueryBills(db *gorm.DB, snsClient svc.SNSType) error {
 		ocdBill := bill.GetOCDBill()
 		if len(ocdBill.Actions) <= len(billData.Actions) {
 			// Set NextRun and exit because it hasn't changed
-			nextRun := time.Now().Add(24 * time.Hour)
-			bill.NextRun = &nextRun
+			bill.SetNextRun()
 			db.Save(&bill)
 			// TODO: Add a check for dead bills with no activity in certain duration
 			continue
 		}
 		billDataJson, _ := json.Marshal(billData)
 		bill.Data = string(billDataJson)
+		db.Save(&bill)
 		// Update with new data and publish the bill ID
 		billJson, _ := json.Marshal(bill)
-		snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"))
+		snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"), "bills")
 	}
 	return nil
 }
 
 func handler(request events.CloudWatchEvent) error {
-	db, err := gorm.Open("mysql", "CONN")
+	db, err := gorm.Open("mysql", fmt.Sprintf(
+		"%s:%s@tcp(%s:3306)/%s",
+		os.Getenv("RDS_USERNAME"),
+		os.Getenv("RDS_PASSWORD"),
+		os.Getenv("RDS_HOST"),
+		os.Getenv("RDS_DB_NAME"),
+	))
 	if err != nil {
 		panic(err)
 	}

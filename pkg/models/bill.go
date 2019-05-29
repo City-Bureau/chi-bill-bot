@@ -61,8 +61,8 @@ type Bill struct {
 	LastTweetID sql.NullInt64 `json:"last_tweet_id"`
 	BillID      string        `gorm:"size:25" json:"id,omitempty"`
 	Active      bool          `gorm:"default:true"`
+	Data        string        `gorm:"type:text"`
 	NextRun     *time.Time
-	Data        string `gorm:"type:text"`
 }
 
 func GetOCDRes(url string) ([]byte, error) {
@@ -159,4 +159,10 @@ func (b *Bill) GetOCDBill() OCDBill {
 func (b *Bill) CreateTweet() string {
 	billData := b.GetOCDBill()
 	return fmt.Sprintf("Tweet about new bill titled: %s #%s", billData.Title, b.BillID)
+}
+
+func (b *Bill) SetNextRun() {
+	// Set NextRun to a time in the future within a defined range
+	nextRun := time.Now().Add(time.Hour * 24)
+	b.NextRun = &nextRun
 }

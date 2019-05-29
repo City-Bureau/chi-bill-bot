@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/dghubble/go-twitter/twitter"
@@ -30,8 +31,10 @@ func NewTwitterClient() *TwitterClient {
 }
 
 func (t *TwitterClient) PostTweet(tweet string, params *twitter.StatusUpdateParams) error {
-	_, _, err := t.Client.Statuses.Update(tweet, params)
-	return err
+	// _, _, err := t.Client.Statuses.Update(tweet, params)
+	// return err
+	fmt.Printf(tweet)
+	return nil
 }
 
 func (t *TwitterClient) GetMentions(params *twitter.MentionTimelineParams) ([]twitter.Tweet, error) {

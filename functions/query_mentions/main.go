@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
@@ -38,14 +39,19 @@ func QueryMentions(db *gorm.DB, twttr svc.Twitter, snsClient svc.SNSType) error 
 		}
 		tweetBillJson, _ := json.Marshal(tweetBill)
 
-		// TODO: Include param to filter on
-		err = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"))
+		err = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"), "tweets")
 	}
 	return nil
 }
 
 func handler(request events.CloudWatchEvent) error {
-	db, err := gorm.Open("mysql", "CONN")
+	db, err := gorm.Open("mysql", fmt.Sprintf(
+		"%s:%s@tcp(%s:3306)/%s",
+		os.Getenv("RDS_USERNAME"),
+		os.Getenv("RDS_PASSWORD"),
+		os.Getenv("RDS_HOST"),
+		os.Getenv("RDS_DB_NAME"),
+	))
 	if err != nil {
 		panic(err)
 	}

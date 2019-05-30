@@ -74,7 +74,7 @@ functions:
         - Ref: ServerlessSubnetB
         - Ref: ServerlessSubnetC
     events:
-      - schedule: cron(0,30 * * * *)
+      - schedule: rate(1 hour)
   handle_bill:
     handler: bin/handle_bill
     timeout: 900
@@ -113,7 +113,7 @@ functions:
         - Ref: ServerlessSubnetB
         - Ref: ServerlessSubnetC
     events:
-      - schedule: cron(0,30 * * * *)
+      - schedule: rate(1 hour)
   handle_tweet:
     handler: bin/handle_tweet
     timeout: 900

@@ -65,7 +65,9 @@ type Bill struct {
 }
 
 func GetOCDRes(url string) ([]byte, error) {
-	client := http.Client{}
+	client := http.Client{
+		Timeout: time.Second * 180,
+	}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

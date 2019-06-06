@@ -7,7 +7,7 @@ provider:
   iamRoleStatements:
     - Effect: Allow
       Action:
-        - SNS:Publish
+        - sns:Publish
       Resource:
         - Ref: SNSTopic
 
@@ -22,7 +22,7 @@ plugins:
   - serverless-plugin-aws-alerts
 
 custom:
-  topicName: ${self:service}
+  topicName: ${self:service}-prod-events
   AURORA:
     DB_NAME: ${env:RDS_DB_NAME}
     USERNAME: ${env:RDS_USERNAME}
@@ -47,7 +47,7 @@ custom:
 functions:
   migrate:
     handler: bin/migrate
-    timeout: 900
+    timeout: 120
     environment:
       RDS_HOST: ${self:custom.AURORA.HOST}
     # alarms:
@@ -61,10 +61,10 @@ functions:
         - Ref: ServerlessSubnetC
   query_tweets:
     handler: bin/query_tweets
-    timeout: 900
+    timeout: 120
     environment:
-      SNS_ARN:
-        Ref: SNSVPCEndpoint
+      SNS_TOPIC_ARN:
+        Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
     # alarms:
     #   - functionErrors
@@ -79,9 +79,9 @@ functions:
       - schedule: rate(1 hour)
   query_mentions:
     handler: bin/query_mentions
-    timeout: 900
+    timeout: 120
     environment:
-      SNS_ARN:
+      SNS_TOPIC_ARN:
         Ref: SNSTopic
     # alarms:
     #   - functionErrors
@@ -95,10 +95,10 @@ functions:
               - query_mentions
   handle_tweet:
     handler: bin/handle_tweet
-    timeout: 900
+    timeout: 120
     environment:
-      SNS_ARN:
-        Ref: SNSVPCEndpoint
+      SNS_TOPIC_ARN:
+        Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
     # alarms:
     #   - functionErrors
@@ -112,16 +112,16 @@ functions:
     events:
       - sns:
           arn:
-            Ref: SNSVPCEndpoint
+            Ref: SNSTopic
           topicName: ${self:custom.topicName}
           filterPolicy:
             feed:
               - handle_tweet
   post_tweet:
     handler: bin/post_tweet
-    timeout: 900
+    timeout: 120
     environment:
-      SNS_ARN:
+      SNS_TOPIC_ARN:
         Ref: SNSTopic
     # alarms:
     #   - functionErrors
@@ -135,10 +135,10 @@ functions:
               - post_tweet
   save_bill:
     handler: bin/save_bill
-    timeout: 900
+    timeout: 120
     environment:
-      SNS_ARN:
-        Ref: SNSVPCEndpoint
+      SNS_TOPIC_ARN:
+        Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
     # alarms:
     #   - functionErrors
@@ -152,17 +152,17 @@ functions:
     events:
       - sns:
           arn:
-            Ref: SNSVPCEndpoint
+            Ref: SNSTopic
           topicName: ${self:custom.topicName}
           filterPolicy:
             feed:
               - save_bill
   query_bills:
     handler: bin/query_bills
-    timeout: 900
+    timeout: 120
     environment:
-      SNS_ARN:
-        Ref: SNSVPCEndpoint
+      SNS_TOPIC_ARN:
+        Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
     # alarms:
     #   - functionErrors
@@ -177,9 +177,9 @@ functions:
       - schedule: rate(1 hour)
   update_bills:
     handler: bin/update_bills
-    timeout: 900
+    timeout: 120
     environment:
-      SNS_ARN:
+      SNS_TOPIC_ARN:
         Ref: SNSTopic
     # alarms:
     #   - functionErrors
@@ -210,10 +210,16 @@ resources:
               Principal: '*'
               Action:
                 - 'sns:*'
-              Resource:
-                - Ref: SNSTopic
+              Resource: '*'
         ServiceName: 'com.amazonaws.${self:provider.region}.sns'
+        PrivateDnsEnabled: true
         VpcEndpointType: Interface
+        SecurityGroupIds:
+          - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
+        SubnetIds:
+          - Ref: ServerlessSubnetA
+          - Ref: ServerlessSubnetB
+          - Ref: ServerlessSubnetC
         VpcId:
           Ref: ServerlessVPC
     ServerlessVPC:

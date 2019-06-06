@@ -17,7 +17,7 @@ func handler(request events.SNSEvent) error {
 	message := request.Records[0].SNS.Message
 
 	var data svc.TweetData
-	err := json.Unmarshal([]byte(message), data)
+	err := json.Unmarshal([]byte(message), &data)
 	if err != nil {
 		return err
 	}

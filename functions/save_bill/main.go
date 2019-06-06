@@ -31,7 +31,7 @@ func handler(request events.SNSEvent) error {
 	defer db.Close()
 
 	var bill models.Bill
-	err = json.Unmarshal([]byte(message), bill)
+	err = json.Unmarshal([]byte(message), &bill)
 	if err != nil {
 		return err
 	}

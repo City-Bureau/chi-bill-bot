@@ -36,11 +36,12 @@ func QueryMentions(sinceTweetId string, twttr svc.Twitter, snsClient svc.SNSType
 		// Load bill data from tweet
 		tweetBill.BillID = tweetBill.ParseBillID(tweetBill.TweetText)
 		tweetBill.SetNextRun()
-		billData, _ := tweetBill.LoadBillData()
-		billJson, _ := json.Marshal(billData)
-		tweetBill.Data = string(billJson)
+		if tweetBill.BillID != "" {
+			billData, _ := tweetBill.LoadBillData()
+			billJson, _ := json.Marshal(billData)
+			tweetBill.Data = string(billJson)
+		}
 		tweetBillJson, _ := json.Marshal(tweetBill)
-
 		_ = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"), "handle_tweet")
 	}
 	return nil

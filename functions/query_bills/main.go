@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 func handler(request events.CloudWatchEvent) error {

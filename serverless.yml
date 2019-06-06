@@ -8,7 +8,8 @@ provider:
     - Effect: Allow
       Action:
         - SNS:Publish
-      Resource: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
+      Resource:
+        - Ref: SNSTopic
 
 package:
   exclude:
@@ -21,7 +22,7 @@ plugins:
   - serverless-plugin-aws-alerts
 
 custom:
-  dispatchTopic: ${self:service}-dispatch
+  topicName: ${self:service}
   AURORA:
     DB_NAME: ${env:RDS_DB_NAME}
     USERNAME: ${env:RDS_USERNAME}
@@ -31,17 +32,17 @@ custom:
     PORT:
       Fn::GetAtt: [AuroraRDSCluster, Endpoint.Port]
     VPC_CIDR: '10'
-  alerts:
-    stages:
-      - prod
-    alarms:
-      - functionErrors
-    topics:
-      alarm:
-        topic: ${self:service}-prod-alerts-alarm
-        notifications:
-          - protocol: email
-            endpoint: ${env:SNS_EMAIL}
+  # alerts:
+  #   stages:
+  #     - prod
+  #   alarms:
+  #     - functionErrors
+  #   topics:
+  #     alarm:
+  #       topic: ${self:service}-prod-alerts-alarm
+  #       notifications:
+  #         - protocol: email
+  #           endpoint: ${env:SNS_EMAIL}
 
 functions:
   migrate:
@@ -49,8 +50,8 @@ functions:
     timeout: 900
     environment:
       RDS_HOST: ${self:custom.AURORA.HOST}
-    alarms:
-      - functionErrors
+    # alarms:
+    #   - functionErrors
     vpc:
       securityGroupIds:
         - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
@@ -58,14 +59,15 @@ functions:
         - Ref: ServerlessSubnetA
         - Ref: ServerlessSubnetB
         - Ref: ServerlessSubnetC
-  query_bills:
-    handler: bin/query_bills
+  query_tweets:
+    handler: bin/query_tweets
     timeout: 900
     environment:
-      SNS_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
+      SNS_ARN:
+        Ref: SNSVPCEndpoint
       RDS_HOST: ${self:custom.AURORA.HOST}
-    alarms:
-      - functionErrors
+    # alarms:
+    #   - functionErrors
     vpc:
       securityGroupIds:
         - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
@@ -75,53 +77,31 @@ functions:
         - Ref: ServerlessSubnetC
     events:
       - schedule: rate(1 hour)
-  handle_bill:
-    handler: bin/handle_bill
-    timeout: 900
-    environment:
-      SNS_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
-      RDS_HOST: ${self:custom.AURORA.HOST}
-    alarms:
-      - functionErrors
-    vpc:
-      securityGroupIds:
-        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
-      subnetIds:
-        - Ref: ServerlessSubnetA
-        - Ref: ServerlessSubnetB
-        - Ref: ServerlessSubnetC
-    events:
-      - sns:
-          topicName: ${self:custom.dispatchTopic}
-          displayName: ${self:custom.dispatchTopic}
-          filterPolicy:
-            feed:
-              - bills
   query_mentions:
     handler: bin/query_mentions
     timeout: 900
     environment:
-      SNS_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
-      RDS_HOST: ${self:custom.AURORA.HOST}
-    alarms:
-      - functionErrors
-    vpc:
-      securityGroupIds:
-        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
-      subnetIds:
-        - Ref: ServerlessSubnetA
-        - Ref: ServerlessSubnetB
-        - Ref: ServerlessSubnetC
+      SNS_ARN:
+        Ref: SNSTopic
+    # alarms:
+    #   - functionErrors
     events:
-      - schedule: rate(1 hour)
+      - sns:
+          arn:
+            Ref: SNSTopic
+          topicName: ${self:custom.topicName}
+          filterPolicy:
+            feed:
+              - query_mentions
   handle_tweet:
     handler: bin/handle_tweet
     timeout: 900
     environment:
-      SNS_ARN: { "Fn::Join" : ["", ["arn:aws:sns:${self:provider.region}:", { "Ref" : "AWS::AccountId" }, ":${self:custom.dispatchTopic}" ] ] }
+      SNS_ARN:
+        Ref: SNSVPCEndpoint
       RDS_HOST: ${self:custom.AURORA.HOST}
-    alarms:
-      - functionErrors
+    # alarms:
+    #   - functionErrors
     vpc:
       securityGroupIds:
         - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
@@ -131,15 +111,111 @@ functions:
         - Ref: ServerlessSubnetC
     events:
       - sns:
-          topicName: ${self:custom.dispatchTopic}
-          displayName: ${self:custom.dispatchTopic}
+          arn:
+            Ref: SNSVPCEndpoint
+          topicName: ${self:custom.topicName}
           filterPolicy:
             feed:
-              - tweets
+              - handle_tweet
+  post_tweet:
+    handler: bin/post_tweet
+    timeout: 900
+    environment:
+      SNS_ARN:
+        Ref: SNSTopic
+    # alarms:
+    #   - functionErrors
+    events:
+      - sns:
+          arn:
+            Ref: SNSTopic
+          topicName: ${self:custom.topicName}
+          filterPolicy:
+            feed:
+              - post_tweet
+  save_bill:
+    handler: bin/save_bill
+    timeout: 900
+    environment:
+      SNS_ARN:
+        Ref: SNSVPCEndpoint
+      RDS_HOST: ${self:custom.AURORA.HOST}
+    # alarms:
+    #   - functionErrors
+    vpc:
+      securityGroupIds:
+        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
+      subnetIds:
+        - Ref: ServerlessSubnetA
+        - Ref: ServerlessSubnetB
+        - Ref: ServerlessSubnetC
+    events:
+      - sns:
+          arn:
+            Ref: SNSVPCEndpoint
+          topicName: ${self:custom.topicName}
+          filterPolicy:
+            feed:
+              - save_bill
+  query_bills:
+    handler: bin/query_bills
+    timeout: 900
+    environment:
+      SNS_ARN:
+        Ref: SNSVPCEndpoint
+      RDS_HOST: ${self:custom.AURORA.HOST}
+    # alarms:
+    #   - functionErrors
+    vpc:
+      securityGroupIds:
+        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
+      subnetIds:
+        - Ref: ServerlessSubnetA
+        - Ref: ServerlessSubnetB
+        - Ref: ServerlessSubnetC
+    events:
+      - schedule: rate(1 hour)
+  update_bills:
+    handler: bin/update_bills
+    timeout: 900
+    environment:
+      SNS_ARN:
+        Ref: SNSTopic
+    # alarms:
+    #   - functionErrors
+    events:
+      - sns:
+          arn:
+            Ref: SNSTopic
+          topicName: ${self:custom.topicName}
+          filterPolicy:
+            feed:
+              - update_bills
 
 resources:
   Resources:
-    # VPC config
+    SNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:service}-prod-events
+        DisplayName: ChiBillBotEvents
+    SNSVPCEndpoint:
+      Type: AWS::EC2::VPCEndpoint
+      DependsOn: SNSTopic
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal: '*'
+              Action:
+                - 'sns:*'
+              Resource:
+                - Ref: SNSTopic
+        ServiceName: 'com.amazonaws.${self:provider.region}.sns'
+        VpcEndpointType: Interface
+        VpcId:
+          Ref: ServerlessVPC
     ServerlessVPC:
       Type: AWS::EC2::VPC
       Properties:

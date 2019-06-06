@@ -1,17 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
-	"github.com/jinzhu/gorm"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 func handler(request events.CloudWatchEvent) error {
@@ -27,16 +26,12 @@ func handler(request events.CloudWatchEvent) error {
 	}
 	defer db.Close()
 
-	var bills []models.Bill
-	db.Limit(5).Find(
-		&bills,
-		"active = true AND next_run <= ? AND bill_id IS NOT NULL",
-		time.Now(),
-	)
+	var bill models.Bill
 
-	billsJson, _ := json.Marshal(bills)
+	db.Order("last_tweet_id desc").First(&bill)
 	snsClient := svc.NewSNSClient()
-	snsClient.Publish(string(billsJson), os.Getenv("SNS_TOPIC_ARN"), "update_bills")
+	snsClient.Publish(string(*bill.LastTweetID), os.Getenv("SNS_TOPIC_ARN"), "query_mentions")
+
 	return nil
 }
 

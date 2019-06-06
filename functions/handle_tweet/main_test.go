@@ -15,7 +15,6 @@ func TestHandleTweetExits(t *testing.T) {
 	db, dbMock, _ := sqlmock.New()
 	DB, _ := gorm.Open("mysql", db)
 
-	twitterMock := new(mocks.TwitterMock)
 	snsMock := new(mocks.SNSClientMock)
 	var bill models.Bill
 	var tweetId int64 = 1234
@@ -27,19 +26,17 @@ func TestHandleTweetExits(t *testing.T) {
 	dbMock.ExpectQuery("SELECT (.+) FROM (.+) WHERE (.+) LIMIT 1").
 		WithArgs(bill.TweetID).
 		WillReturnRows(sqlmock.NewRows([]string{"pk", "tweet_id"}).AddRow(1, 1234))
-
-	HandleTweet(&bill, DB, twitterMock, snsMock)
+	HandleTweet(&bill, DB, snsMock)
 	if err := dbMock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
-	twitterMock.AssertNotCalled(t, "PostTweet", mock.Anything, mock.Anything)
+	snsMock.AssertNotCalled(t, "Publish", mock.Anything, mock.Anything, "save_bill")
 }
 
 func TestHandleTweetEmptyBillID(t *testing.T) {
 	db, dbMock, _ := sqlmock.New()
 	DB, _ := gorm.Open("mysql", db)
 
-	twitterMock := new(mocks.TwitterMock)
 	snsMock := new(mocks.SNSClientMock)
 	var bill models.Bill
 	var tweetId int64 = 1
@@ -50,10 +47,11 @@ func TestHandleTweetEmptyBillID(t *testing.T) {
 	dbMock.ExpectQuery("SELECT (.+) FROM (.+) WHERE (.+) LIMIT 1").
 		WithArgs(bill.TweetID).
 		WillReturnError(gorm.ErrRecordNotFound)
-	twitterMock.On("PostTweet", mock.Anything, mock.Anything)
-	HandleTweet(&bill, DB, twitterMock, snsMock)
+	snsMock.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	HandleTweet(&bill, DB, snsMock)
 	if err := dbMock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
-	twitterMock.AssertExpectations(t)
+	snsMock.AssertExpectations(t)
+	snsMock.AssertNumberOfCalls(t, "Publish", 2)
 }

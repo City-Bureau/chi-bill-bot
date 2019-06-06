@@ -1,7 +1,7 @@
 package svc
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/dghubble/go-twitter/twitter"
@@ -15,6 +15,11 @@ type Twitter interface {
 
 type TwitterClient struct {
 	Client *twitter.Client
+}
+
+type TweetData struct {
+	Text   string                     `json:"text"`
+	Params twitter.StatusUpdateParams `json:"params"`
 }
 
 func NewTwitterClient() *TwitterClient {
@@ -33,7 +38,7 @@ func NewTwitterClient() *TwitterClient {
 func (t *TwitterClient) PostTweet(tweet string, params *twitter.StatusUpdateParams) error {
 	// _, _, err := t.Client.Statuses.Update(tweet, params)
 	// return err
-	fmt.Printf(tweet)
+	log.Printf(tweet)
 	return nil
 }
 

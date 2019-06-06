@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
@@ -12,15 +12,11 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/dghubble/go-twitter/twitter"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
-func QueryMentions(db *gorm.DB, twttr svc.Twitter, snsClient svc.SNSType) error {
-	var bill models.Bill
-
-	db.Order("last_tweet_id desc").First(&bill)
-	tweets, err := twttr.GetMentions(&twitter.MentionTimelineParams{SinceID: *bill.LastTweetID})
+func QueryMentions(sinceTweetId string, twttr svc.Twitter, snsClient svc.SNSType) error {
+	sinceTweetIdInt, _ := strconv.ParseInt(sinceTweetId, 10, 64)
+	tweets, err := twttr.GetMentions(&twitter.MentionTimelineParams{SinceID: sinceTweetIdInt})
 
 	if err != nil {
 		log.Fatal(err)
@@ -36,27 +32,22 @@ func QueryMentions(db *gorm.DB, twttr svc.Twitter, snsClient svc.SNSType) error 
 			TweetText:   tweet.FullText,
 			LastTweetID: &lastTweetId,
 		}
+
+		// Load bill data from tweet
+		tweetBill.BillID = tweetBill.ParseBillID(tweetBill.TweetText)
+		tweetBill.SetNextRun()
+		billData, _ := tweetBill.LoadBillData()
+		billJson, _ := json.Marshal(billData)
+		tweetBill.Data = string(billJson)
 		tweetBillJson, _ := json.Marshal(tweetBill)
 
-		err = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"), "tweets")
+		_ = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"), "handle_tweet")
 	}
 	return nil
 }
 
-func handler(request events.CloudWatchEvent) error {
-	db, err := gorm.Open("mysql", fmt.Sprintf(
-		"%s:%s@tcp(%s:3306)/%s",
-		os.Getenv("RDS_USERNAME"),
-		os.Getenv("RDS_PASSWORD"),
-		os.Getenv("RDS_HOST"),
-		os.Getenv("RDS_DB_NAME"),
-	))
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
-	return QueryMentions(db, svc.NewTwitterClient(), svc.NewSNSClient())
+func handler(request events.SNSEvent) error {
+	return QueryMentions(request.Records[0].SNS.Message, svc.NewTwitterClient(), svc.NewSNSClient())
 }
 
 func main() {

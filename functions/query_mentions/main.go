@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"strconv"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
@@ -14,17 +13,8 @@ import (
 	"github.com/dghubble/go-twitter/twitter"
 )
 
-func QueryMentions(sinceTweetId string, twttr svc.Twitter, snsClient svc.SNSType) error {
-	var params twitter.MentionTimelineParams
-	if sinceTweetId != "" {
-		sinceTweetIdInt, err := strconv.ParseInt(sinceTweetId, 10, 64)
-		if err != nil {
-			return err
-		}
-		params = twitter.MentionTimelineParams{SinceID: sinceTweetIdInt}
-	}
-	tweets, err := twttr.GetMentions(&params)
-
+func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
+	tweets, err := twttr.GetMentions(&twitter.MentionTimelineParams{})
 	if err != nil {
 		return err
 	}
@@ -37,19 +27,28 @@ func QueryMentions(sinceTweetId string, twttr svc.Twitter, snsClient svc.SNSType
 
 	// Iterate through mentions, publishing each to SNS topic
 	for _, tweet := range tweets {
+		// TODO: Figure out ExtendedTweet
+		// tweetText := tweet.Text
+		// if tweet.ExtendedTweet != nil {
+		// 	log.Println(tweet.ExtendedTweet.FullText)
+		// 	tweetText = tweet.ExtendedTweet.FullText
+		// }
 		tweetBill := &models.Bill{
 			TweetID:     &tweet.ID,
-			TweetText:   tweet.FullText,
+			TweetText:   tweet.Text,
 			LastTweetID: &lastTweetId,
 		}
 
 		// Load bill data from tweet
 		tweetBill.BillID = tweetBill.ParseBillID(tweetBill.TweetText)
-		if tweetBill.BillID != "" {
-			billData, _ := tweetBill.LoadBillData()
-			billJson, _ := json.Marshal(billData)
-			tweetBill.Data = string(billJson)
+		log.Println(tweet.ID)
+		log.Println(tweetBill.BillID)
+		if tweetBill.BillID == "" {
+			continue
 		}
+		billData, _ := tweetBill.LoadBillData()
+		billJson, _ := json.Marshal(billData)
+		tweetBill.Data = string(billJson)
 		tweetBillJson, _ := json.Marshal(tweetBill)
 		err = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"), "handle_tweet")
 		if err != nil {
@@ -59,8 +58,8 @@ func QueryMentions(sinceTweetId string, twttr svc.Twitter, snsClient svc.SNSType
 	return nil
 }
 
-func handler(request events.SNSEvent) error {
-	err := QueryMentions(request.Records[0].SNS.Message, svc.NewTwitterClient(), svc.NewSNSClient())
+func handler(request events.CloudWatchEvent) error {
+	err := QueryMentions(svc.NewTwitterClient(), svc.NewSNSClient())
 	if err != nil {
 		log.Fatal(err)
 	}

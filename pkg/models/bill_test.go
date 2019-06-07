@@ -25,6 +25,9 @@ func TestParseBillID(t *testing.T) {
 	if bill.ParseBillID("O-2015-12") != "O201512" {
 		t.Errorf("ParseBillID should handle hyphens in 'O-2015-12'")
 	}
+	if bill.ParseBillID("@chicagoledger O2018-7001 test") != "O20187001" {
+		t.Errorf("ParseBillID should parse 'O2018-7001' correctly")
+	}
 }
 
 func TestGetAPIBillID(t *testing.T) {

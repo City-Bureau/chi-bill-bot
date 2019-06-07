@@ -59,24 +59,6 @@ functions:
         - Ref: ServerlessSubnetA
         - Ref: ServerlessSubnetB
         - Ref: ServerlessSubnetC
-  get_last_tweet_id:
-    handler: bin/get_last_tweet_id
-    timeout: 120
-    environment:
-      SNS_TOPIC_ARN:
-        Ref: SNSTopic
-      RDS_HOST: ${self:custom.AURORA.HOST}
-    # alarms:
-    #   - functionErrors
-    vpc:
-      securityGroupIds:
-        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
-      subnetIds:
-        - Ref: ServerlessSubnetA
-        - Ref: ServerlessSubnetB
-        - Ref: ServerlessSubnetC
-    events:
-      - schedule: rate(1 hour)
   query_mentions:
     handler: bin/query_mentions
     timeout: 120
@@ -86,13 +68,7 @@ functions:
     # alarms:
     #   - functionErrors
     events:
-      - sns:
-          arn:
-            Ref: SNSTopic
-          topicName: ${self:custom.topicName}
-          filterPolicy:
-            feed:
-              - query_mentions
+      - schedule: rate(30 minutes)
   handle_tweet:
     handler: bin/handle_tweet
     timeout: 120

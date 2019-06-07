@@ -59,8 +59,8 @@ functions:
         - Ref: ServerlessSubnetA
         - Ref: ServerlessSubnetB
         - Ref: ServerlessSubnetC
-  query_tweets:
-    handler: bin/query_tweets
+  get_last_tweet_id:
+    handler: bin/get_last_tweet_id
     timeout: 120
     environment:
       SNS_TOPIC_ARN:

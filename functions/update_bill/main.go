@@ -12,21 +12,16 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-func UpdateBill(bill models.Bill, snsClient *svc.SNSClient) error {
-	// Get new data for bill, check if it's changed
-	billData, err := bill.GetOCDBillData()
-	if err != nil {
-		return err
-	}
-	ocdBill := bill.GetOCDBill()
-	billDataJson, err := json.Marshal(billData)
-	if err != nil {
-		return err
-	}
+func UpdateBill(bill models.Bill, ocdBill models.OCDBill, snsClient svc.SNSType) error {
+	billData := bill.GetOCDBill()
 
 	// If the bill is new or has changed tweet it out
 	if bill.NextRun == nil || len(ocdBill.Actions) > len(billData.Actions) {
-		bill.Data = string(billDataJson)
+		ocdBillJson, err := json.Marshal(ocdBill)
+		if err != nil {
+			return err
+		}
+		bill.Data = string(ocdBillJson)
 		data := svc.TweetData{Text: bill.CreateTweet()}
 		tweetJson, err := json.Marshal(data)
 		if err != nil {
@@ -64,7 +59,13 @@ func handler(request events.SNSEvent) error {
 		return nil
 	}
 
-	err = UpdateBill(bill, snsClient)
+	// Get new data for bill, check if it's changed
+	ocdBill, err := bill.GetOCDBillData()
+	if err != nil {
+		return err
+	}
+
+	err = UpdateBill(bill, ocdBill, snsClient)
 	// Only log this error since it just prevented
 	if err != nil {
 		snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"), "update_bill")

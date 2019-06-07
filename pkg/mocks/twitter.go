@@ -15,5 +15,7 @@ func (m *TwitterMock) PostTweet(tweet string, params *twitter.StatusUpdateParams
 }
 
 func (m *TwitterMock) GetMentions(params *twitter.MentionTimelineParams) ([]twitter.Tweet, error) {
-	return nil, nil
+	args := m.Called(params)
+	tweets := args.Get(0).([]twitter.Tweet)
+	return tweets, nil
 }

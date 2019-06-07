@@ -40,3 +40,11 @@ func TestGetAPIBillID(t *testing.T) {
 		t.Errorf("GetAPIBillID should return 'FL2010-1', got %s", apiBillId)
 	}
 }
+
+func TestSetNextRun(t *testing.T) {
+	bill := Bill{}
+	bill.SetNextRun()
+	if bill.NextRun.Hour() < 9 || bill.NextRun.Hour() > 17 {
+		t.Errorf("Hour: %d is outside range 9AM-10PM", bill.NextRun.Hour())
+	}
+}

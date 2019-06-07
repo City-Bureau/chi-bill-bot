@@ -190,6 +190,15 @@ func (b *Bill) CreateTweet() string {
 
 func (b *Bill) SetNextRun() {
 	// Set NextRun to a time in the future within a defined range
-	nextRun := time.Now().Add(time.Hour * 24)
+	loc, _ := time.LoadLocation("America/Chicago")
+	now := time.Now().In(loc)
+	// Make sure it's between 9AM and 10PM Chicago
+	diffHours := 24
+	if now.Hour() < 9 {
+		diffHours = diffHours + (9 - now.Hour())
+	} else if now.Hour() > 17 {
+		diffHours = diffHours - (now.Hour() - 17)
+	}
+	nextRun := now.Add(time.Hour * time.Duration(diffHours))
 	b.NextRun = &nextRun
 }

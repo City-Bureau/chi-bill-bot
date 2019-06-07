@@ -35,6 +35,7 @@ type Action struct {
 	Date           string   `json:"date"`
 	Description    string   `json:"description"`
 	Classification []string `json:"classification"`
+	Organization   Organization
 }
 
 type OCDBill struct {
@@ -158,8 +159,33 @@ func (b *Bill) GetOCDBill() OCDBill {
 }
 
 func (b *Bill) CreateTweet() string {
-	billData := b.GetOCDBill()
-	return fmt.Sprintf("Tweet about new bill titled: %s #%s", billData.Title, b.BillID)
+	billId := b.GetAPIBillID()
+	ocdBill := b.GetOCDBill()
+	url := fmt.Sprintf("https://chicago.councilmatic.org/legislation/%s", strings.ToLower(billId))
+	if len(ocdBill.Actions) == 0 {
+		return fmt.Sprintf("%s. See more at %s #%s", billId, url, b.BillID)
+	}
+	action := ocdBill.Actions[len(ocdBill.Actions)-1]
+
+	var actionText string = billId
+	classification := ""
+	if len(action.Classification) > 0 {
+		classification = action.Classification[0]
+	}
+	switch cls := classification; cls {
+	case "introduction":
+		actionText = fmt.Sprintf("%s was introduced in %s", billId, action.Organization.Name)
+	case "referral-committee":
+		actionText = fmt.Sprintf("%s was referred to committee", billId)
+	case "committee-passage-favorable":
+		actionText = fmt.Sprintf("%s was recommended to pass by the %s", billId, action.Organization.Name)
+	case "passage":
+		actionText = fmt.Sprintf("%s passed", billId)
+	case "executive-signature":
+		actionText = fmt.Sprintf("%s was signed by the mayor", billId)
+	}
+
+	return fmt.Sprintf("%s. See more at %s #%s", actionText, url, b.BillID)
 }
 
 func (b *Bill) SetNextRun() {

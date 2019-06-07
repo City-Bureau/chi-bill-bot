@@ -53,7 +53,8 @@ func TestUpdateBillNewActionsSendsTweet(t *testing.T) {
 			models.Action{
 				Date:           "2019-01-01",
 				Description:    "",
-				Classification: []string{},
+				Classification: []string{"introduction"},
+				Organization:   models.Organization{Name: "Test"},
 			},
 		},
 	}

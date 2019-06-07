@@ -175,8 +175,8 @@ functions:
         - Ref: ServerlessSubnetC
     events:
       - schedule: rate(1 hour)
-  update_bills:
-    handler: bin/update_bills
+  update_bill:
+    handler: bin/update_bill
     timeout: 120
     environment:
       SNS_TOPIC_ARN:
@@ -190,7 +190,7 @@ functions:
           topicName: ${self:custom.topicName}
           filterPolicy:
             feed:
-              - update_bills
+              - update_bill
 
 resources:
   Resources:

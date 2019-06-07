@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
 	"github.com/aws/aws-lambda-go/events"
@@ -23,8 +24,11 @@ func handler(request events.SNSEvent) error {
 	}
 
 	twttr := svc.NewTwitterClient()
-	twttr.PostTweet(data.Text, &data.Params)
-	return nil
+	err = twttr.PostTweet(data.Text, &data.Params)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return err
 }
 
 func main() {

@@ -15,13 +15,23 @@ import (
 )
 
 func QueryMentions(sinceTweetId string, twttr svc.Twitter, snsClient svc.SNSType) error {
-	sinceTweetIdInt, _ := strconv.ParseInt(sinceTweetId, 10, 64)
-	tweets, err := twttr.GetMentions(&twitter.MentionTimelineParams{SinceID: sinceTweetIdInt})
+	var params twitter.MentionTimelineParams
+	if sinceTweetId != "" {
+		sinceTweetIdInt, err := strconv.ParseInt(sinceTweetId, 10, 64)
+		if err != nil {
+			return err
+		}
+		params = twitter.MentionTimelineParams{SinceID: sinceTweetIdInt}
+	}
+	tweets, err := twttr.GetMentions(&params)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
+	if len(tweets) == 0 {
+		return nil
+	}
 	// Get the last tweet in the list of tweets, assign that to all
 	lastTweetId := tweets[len(tweets)-1].ID
 
@@ -35,20 +45,26 @@ func QueryMentions(sinceTweetId string, twttr svc.Twitter, snsClient svc.SNSType
 
 		// Load bill data from tweet
 		tweetBill.BillID = tweetBill.ParseBillID(tweetBill.TweetText)
-		tweetBill.SetNextRun()
 		if tweetBill.BillID != "" {
 			billData, _ := tweetBill.LoadBillData()
 			billJson, _ := json.Marshal(billData)
 			tweetBill.Data = string(billJson)
 		}
 		tweetBillJson, _ := json.Marshal(tweetBill)
-		_ = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"), "handle_tweet")
+		err = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"), "handle_tweet")
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func handler(request events.SNSEvent) error {
-	return QueryMentions(request.Records[0].SNS.Message, svc.NewTwitterClient(), svc.NewSNSClient())
+	err := QueryMentions(request.Records[0].SNS.Message, svc.NewTwitterClient(), svc.NewSNSClient())
+	if err != nil {
+		log.Fatal(err)
+	}
+	return err
 }
 
 func main() {

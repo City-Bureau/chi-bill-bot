@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
@@ -19,20 +20,22 @@ func handler(request events.SNSEvent) error {
 	}
 	message := request.Records[0].SNS.Message
 	db, err := gorm.Open("mysql", fmt.Sprintf(
-		"%s:%s@tcp(%s:3306)/%s",
+		"%s:%s@tcp(%s:3306)/%s?parseTime=true",
 		os.Getenv("RDS_USERNAME"),
 		os.Getenv("RDS_PASSWORD"),
 		os.Getenv("RDS_HOST"),
 		os.Getenv("RDS_DB_NAME"),
 	))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return err
 	}
 	defer db.Close()
 
 	var bill models.Bill
 	err = json.Unmarshal([]byte(message), &bill)
 	if err != nil {
+		log.Fatal(err)
 		return err
 	}
 

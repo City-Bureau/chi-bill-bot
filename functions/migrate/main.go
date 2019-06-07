@@ -13,12 +13,13 @@ import (
 
 func handler(request events.CloudWatchEvent) error {
 	db, _ := gorm.Open("mysql", fmt.Sprintf(
-		"%s:%s@tcp(%s:3306)/%s",
+		"%s:%s@tcp(%s:3306)/%s?parseTime=true",
 		os.Getenv("RDS_USERNAME"),
 		os.Getenv("RDS_PASSWORD"),
 		os.Getenv("RDS_HOST"),
 		os.Getenv("RDS_DB_NAME"),
 	))
+	// db.DropTable(&models.Bill{})
 	db.AutoMigrate(&models.Bill{})
 	defer db.Close()
 

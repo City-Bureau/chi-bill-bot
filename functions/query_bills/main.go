@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -17,27 +18,37 @@ import (
 
 func handler(request events.CloudWatchEvent) error {
 	db, err := gorm.Open("mysql", fmt.Sprintf(
-		"%s:%s@tcp(%s:3306)/%s",
+		"%s:%s@tcp(%s:3306)/%s?parseTime=true",
 		os.Getenv("RDS_USERNAME"),
 		os.Getenv("RDS_PASSWORD"),
 		os.Getenv("RDS_HOST"),
 		os.Getenv("RDS_DB_NAME"),
 	))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+		return err
 	}
 	defer db.Close()
 
 	var bills []models.Bill
+	snsClient := svc.NewSNSClient()
 	db.Limit(5).Find(
 		&bills,
-		"active = true AND next_run <= ? AND bill_id IS NOT NULL",
+		"active = true AND (next_run <= ? OR next_run IS NULL) AND bill_id IS NOT NULL AND bill_id != ''",
 		time.Now(),
 	)
 
-	billsJson, _ := json.Marshal(bills)
-	snsClient := svc.NewSNSClient()
-	snsClient.Publish(string(billsJson), os.Getenv("SNS_TOPIC_ARN"), "update_bills")
+	for _, bill := range bills {
+		// Log errors but don't exit since we can just ignore them here
+		billJson, err := json.Marshal(bill)
+		if err != nil {
+			log.Println(err)
+		}
+		err = snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"), "update_bill")
+		if err != nil {
+			log.Println(err)
+		}
+	}
 	return nil
 }
 

@@ -52,6 +52,6 @@ func TestHandleTweetEmptyBillID(t *testing.T) {
 	if err := dbMock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
-	snsMock.AssertExpectations(t)
-	snsMock.AssertNumberOfCalls(t, "Publish", 2)
+	snsMock.AssertCalled(t, "Publish", mock.Anything, mock.Anything, "save_bill")
+	snsMock.AssertNumberOfCalls(t, "Publish", 1)
 }

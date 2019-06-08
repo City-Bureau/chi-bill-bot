@@ -28,11 +28,6 @@ func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 	// Iterate through mentions, publishing each to SNS topic
 	for _, tweet := range tweets {
 		// TODO: Figure out ExtendedTweet
-		// tweetText := tweet.Text
-		// if tweet.ExtendedTweet != nil {
-		// 	log.Println(tweet.ExtendedTweet.FullText)
-		// 	tweetText = tweet.ExtendedTweet.FullText
-		// }
 		tweetBill := &models.Bill{
 			TweetID:     &tweet.ID,
 			TweetText:   tweet.Text,

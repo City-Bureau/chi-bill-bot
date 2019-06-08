@@ -42,7 +42,9 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 
 	if bill.BillID == "" {
 		bill.Active = false
-		return SaveBillAndTweet("Couldn't parse a bill identifier from the tweet", bill, snsClient)
+		// Don't post a tweet for unmatched bill, otherwise will go for all tweets with mentions
+		billJson, _ := json.Marshal(bill)
+		return snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"), "save_bill")
 	}
 
 	var existingBill models.Bill

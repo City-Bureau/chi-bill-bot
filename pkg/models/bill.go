@@ -32,10 +32,11 @@ type Entity struct {
 }
 
 type Action struct {
-	Date           string   `json:"date"`
-	Description    string   `json:"description"`
-	Classification []string `json:"classification"`
-	Organization   Organization
+	Date            string   `json:"date"`
+	Description     string   `json:"description"`
+	Classification  []string `json:"classification"`
+	RelatedEntities []Entity `json:"related_entities"`
+	Organization    Organization
 }
 
 type OCDBill struct {
@@ -175,10 +176,18 @@ func (b *Bill) CreateTweet() string {
 	switch cls := classification; cls {
 	case "introduction":
 		actionText = fmt.Sprintf("%s was introduced in %s", billId, action.Organization.Name)
-	case "referral-committee":
-		actionText = fmt.Sprintf("%s was referred to committee", billId)
+	case "filing":
+		actionText = fmt.Sprintf("%s was placed on file", billId)
+	case "committee-referral", "referral-committee":
+		if len(action.RelatedEntities) > 0 {
+			actionText = fmt.Sprintf("%s was referred to the %s", billId, action.RelatedEntities[0].Name)
+		} else {
+			actionText = fmt.Sprintf("%s was referred to committee", billId)
+		}
 	case "committee-passage-favorable":
 		actionText = fmt.Sprintf("%s was recommended to pass by the %s", billId, action.Organization.Name)
+	case "amendment-passage":
+		actionText = fmt.Sprintf("%s was amended in the %s", billId, action.Organization.Name)
 	case "passage":
 		actionText = fmt.Sprintf("%s passed", billId)
 	case "executive-signature":

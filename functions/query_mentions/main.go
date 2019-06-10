@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"time"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
@@ -27,6 +28,11 @@ func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 
 	// Iterate through mentions, publishing each to SNS topic
 	for _, tweet := range tweets {
+		// Ignore if more than 48 hours old
+		createdTime, _ := tweet.CreatedAtTime()
+		if createdTime.Before(time.Now().Add(time.Hour * -48)) {
+			continue
+		}
 		// TODO: Figure out ExtendedTweet
 		tweetBill := &models.Bill{
 			TweetID:     &tweet.ID,

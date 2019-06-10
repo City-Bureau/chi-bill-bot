@@ -32,17 +32,17 @@ custom:
     PORT:
       Fn::GetAtt: [AuroraRDSCluster, Endpoint.Port]
     VPC_CIDR: '10'
-  # alerts:
-  #   stages:
-  #     - prod
-  #   alarms:
-  #     - functionErrors
-  #   topics:
-  #     alarm:
-  #       topic: ${self:service}-prod-alerts-alarm
-  #       notifications:
-  #         - protocol: email
-  #           endpoint: ${env:SNS_EMAIL}
+  alerts:
+    stages:
+      - prod
+    alarms:
+      - functionErrors
+    topics:
+      alarm:
+        topic: ${self:service}-prod-alerts-alarm
+        notifications:
+          - protocol: email
+            endpoint: ${env:SNS_EMAIL}
 
 functions:
   migrate:
@@ -50,8 +50,8 @@ functions:
     timeout: 120
     environment:
       RDS_HOST: ${self:custom.AURORA.HOST}
-    # alarms:
-    #   - functionErrors
+    alarms:
+      - functionErrors
     vpc:
       securityGroupIds:
         - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
@@ -65,8 +65,8 @@ functions:
     environment:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
-    # alarms:
-    #   - functionErrors
+    alarms:
+      - functionErrors
     events:
       - schedule: rate(30 minutes)
   handle_tweet:
@@ -76,8 +76,8 @@ functions:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
-    # alarms:
-    #   - functionErrors
+    alarms:
+      - functionErrors
     vpc:
       securityGroupIds:
         - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
@@ -99,8 +99,8 @@ functions:
     environment:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
-    # alarms:
-    #   - functionErrors
+    alarms:
+      - functionErrors
     events:
       - sns:
           arn:
@@ -116,8 +116,8 @@ functions:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
-    # alarms:
-    #   - functionErrors
+    alarms:
+      - functionErrors
     vpc:
       securityGroupIds:
         - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
@@ -140,8 +140,8 @@ functions:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
-    # alarms:
-    #   - functionErrors
+    alarms:
+      - functionErrors
     vpc:
       securityGroupIds:
         - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
@@ -150,15 +150,15 @@ functions:
         - Ref: ServerlessSubnetB
         - Ref: ServerlessSubnetC
     events:
-      - schedule: rate(1 hour)
+      - schedule: rate(4 hours)
   update_bill:
     handler: bin/update_bill
     timeout: 120
     environment:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
-    # alarms:
-    #   - functionErrors
+    alarms:
+      - functionErrors
     events:
       - sns:
           arn:
@@ -229,7 +229,6 @@ resources:
           Ref: ServerlessVPC
         AvailabilityZone: ${self:provider.region}c
         CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.2.0/24'
-    # Aurora DB config
     AuroraSubnetGroup:
       Type: AWS::RDS::DBSubnetGroup
       Properties:

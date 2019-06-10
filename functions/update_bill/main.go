@@ -32,7 +32,6 @@ func UpdateBill(bill models.Bill, ocdBill models.OCDBill, snsClient svc.SNSType)
 			return err
 		}
 	}
-	// TODO: Add a check for dead bills with no activity in certain duration
 	bill.SetNextRun()
 	billJson, err := json.Marshal(bill)
 	if err != nil {

@@ -68,7 +68,7 @@ functions:
     alarms:
       - functionErrors
     events:
-      - schedule: rate(30 minutes)
+      - schedule: rate(10 minutes)
   handle_tweet:
     handler: bin/handle_tweet
     timeout: 120

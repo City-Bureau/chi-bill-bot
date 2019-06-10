@@ -36,10 +36,9 @@ func NewTwitterClient() *TwitterClient {
 }
 
 func (t *TwitterClient) PostTweet(tweet string, params *twitter.StatusUpdateParams) error {
-	// _, _, err := t.Client.Statuses.Update(tweet, params)
-	// return err
 	log.Printf(tweet)
-	return nil
+	_, _, err := t.Client.Statuses.Update(tweet, params)
+	return err
 }
 
 func (t *TwitterClient) GetMentions(params *twitter.MentionTimelineParams) ([]twitter.Tweet, error) {

@@ -53,11 +53,15 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 		if ocdBill.ID == "" {
 			// Tweet that a valid bill wasn't found
 			bill.Active = false
-			return SaveBillAndTweet("Valid bill not found", bill, snsClient)
+			return SaveBillAndTweet("We couldn't find a bill with that ID", bill, snsClient)
 		}
 		// Tweet that the new bill is now being tracked, save
 		return SaveBillAndTweet(
-			fmt.Sprintf("Bill now being tracked, you can follow with #%s", bill.BillID),
+			fmt.Sprintf(
+				"We're now tracking %s. You can follow along with #%s",
+				bill.GetAPIBillID(),
+				bill.BillID,
+			),
 			bill,
 			snsClient,
 		)
@@ -65,7 +69,11 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 		// Tweet standard reply about already being able to follow it with hashtag
 		existingBill.LastTweetID = bill.LastTweetID
 		return SaveBillAndTweet(
-			fmt.Sprintf("Bill already being tracked, you can follow with #%s", existingBill.BillID),
+			fmt.Sprintf(
+				"We're already tracking %s. You can follow along with #%s",
+				bill.GetAPIBillID(),
+				existingBill.BillID,
+			),
 			&existingBill,
 			snsClient,
 		)

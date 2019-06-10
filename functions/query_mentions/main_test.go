@@ -17,6 +17,7 @@ func TestQueryMentionsIgnoresEmptyBillID(t *testing.T) {
 		twitter.Tweet{
 			ID:        1,
 			Text:      "Testing bill",
+			User:      &twitter.User{ScreenName: "testuser"},
 			CreatedAt: time.Now().Format(TIME_FORMAT),
 		},
 	}
@@ -33,6 +34,7 @@ func TestQueryMentionsIgnoresOldTweet(t *testing.T) {
 		twitter.Tweet{
 			ID:        1,
 			Text:      "@chicagoledger O2010-11 Testing bill",
+			User:      &twitter.User{ScreenName: "testuser"},
 			CreatedAt: time.Now().Add(time.Hour * -72).Format(TIME_FORMAT),
 		},
 	}
@@ -50,6 +52,7 @@ func TestQueryMentionsTweetsBill(t *testing.T) {
 		twitter.Tweet{
 			ID:        1,
 			Text:      "@chicagoledger O2010-11 Testing bill",
+			User:      &twitter.User{ScreenName: "testuser"},
 			CreatedAt: time.Now().Format(TIME_FORMAT),
 		},
 	}

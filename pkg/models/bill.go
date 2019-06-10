@@ -58,6 +58,7 @@ type OCDResponse struct {
 type Bill struct {
 	PK          uint   `gorm:"primary_key"`
 	TweetID     *int64 `json:"tweet_id,omitempty"`
+	TweetUser   string `gorm:"size:250" json:"tweet_user"`
 	TweetText   string `gorm:"size:300" json:"tweet_text"`
 	LastTweetID *int64 `json:"last_tweet_id,omitempty"`
 	BillID      string `gorm:"size:25" json:"id,omitempty"`

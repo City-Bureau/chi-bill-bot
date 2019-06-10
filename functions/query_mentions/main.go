@@ -28,15 +28,16 @@ func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 
 	// Iterate through mentions, publishing each to SNS topic
 	for _, tweet := range tweets {
-		// Ignore if more than 48 hours old
+		// Ignore if more than 48 hours old or doesn't have a user
 		createdTime, _ := tweet.CreatedAtTime()
-		if createdTime.Before(time.Now().Add(time.Hour * -48)) {
+		if createdTime.Before(time.Now().Add(time.Hour*-48)) || tweet.User == nil {
 			continue
 		}
 		// TODO: Figure out ExtendedTweet
 		tweetBill := &models.Bill{
 			TweetID:     &tweet.ID,
 			TweetText:   tweet.Text,
+			TweetUser:   tweet.User.ScreenName,
 			LastTweetID: &lastTweetId,
 		}
 

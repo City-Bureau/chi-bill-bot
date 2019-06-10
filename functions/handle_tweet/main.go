@@ -24,7 +24,10 @@ func SaveBillAndTweet(text string, bill *models.Bill, snsClient svc.SNSType) err
 	if err != nil {
 		return err
 	}
-	data := svc.TweetData{Text: text, Params: twitter.StatusUpdateParams{InReplyToStatusID: *bill.TweetID}}
+	data := svc.TweetData{
+		Text:   fmt.Sprintf("@%s %s", bill.TweetUser, text),
+		Params: twitter.StatusUpdateParams{InReplyToStatusID: *bill.TweetID},
+	}
 	tweetJson, err := json.Marshal(data)
 	if err != nil {
 		return err

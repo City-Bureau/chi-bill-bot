@@ -53,15 +53,24 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 	var existingBill models.Bill
 	if db.Where(&models.Bill{BillID: bill.BillID}).Take(&existingBill).RecordNotFound() {
 		ocdBill := bill.GetOCDBill()
+		billCls := ocdBill.Extras.Classification
+		if billCls != "" {
+			billCls = fmt.Sprintf("%s ", billCls)
+		}
 		if ocdBill.ID == "" {
 			// Tweet that a valid bill wasn't found
 			bill.Active = false
-			return SaveBillAndTweet("We couldn't find a bill with that ID", bill, snsClient)
+			return SaveBillAndTweet(
+				"We couldn't find a Chicago City Council bill with that ID",
+				bill,
+				snsClient,
+			)
 		}
 		// Tweet that the new bill is now being tracked, save
 		return SaveBillAndTweet(
 			fmt.Sprintf(
-				"We're now tracking %s. You can follow along with #%s",
+				"We're now tracking Chicago City Council %s%s. You can follow along with #%s—we'll update you when this legislation moves.",
+				billCls,
 				bill.GetAPIBillID(),
 				bill.BillID,
 			),
@@ -71,9 +80,15 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 	} else {
 		// Tweet standard reply about already being able to follow it with hashtag
 		existingBill.LastTweetID = bill.LastTweetID
+		ocdBill := existingBill.GetOCDBill()
+		billCls := ocdBill.Extras.Classification
+		if billCls != "" {
+			billCls = fmt.Sprintf("%s ", billCls)
+		}
 		return SaveBillAndTweet(
 			fmt.Sprintf(
-				"We're already tracking %s. You can follow along with #%s",
+				"We're already tracking %s%s. You can follow along with #%s—we'll update you when this legislation moves.",
+				billCls,
 				bill.GetAPIBillID(),
 				existingBill.BillID,
 			),

@@ -71,7 +71,7 @@ functions:
       - schedule: rate(10 minutes)
   handle_tweet:
     handler: bin/handle_tweet
-    timeout: 120
+    timeout: 300
     environment:
       SNS_TOPIC_ARN:
         Ref: SNSTopic

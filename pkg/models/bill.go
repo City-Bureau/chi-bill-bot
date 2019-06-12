@@ -39,6 +39,10 @@ type Action struct {
 	Organization    Organization
 }
 
+type Extras struct {
+	Classification string `json:"local_classification,omitempty"`
+}
+
 type OCDBill struct {
 	ID             string        `json:"id"`
 	Identifier     string        `json:"identifier"`
@@ -49,6 +53,7 @@ type OCDBill struct {
 	Sponsorships   []Sponsorship `json:"sponsorships,omitempty"`
 	Actions        []Action      `json:"actions,omitempty"`
 	Entities       []Entity      `json:"related_entities,omitempty"`
+	Extras         Extras
 }
 
 type OCDResponse struct {
@@ -163,36 +168,40 @@ func (b *Bill) GetOCDBill() OCDBill {
 func (b *Bill) CreateTweet() string {
 	billId := b.GetAPIBillID()
 	ocdBill := b.GetOCDBill()
+	billCls := ocdBill.Extras.Classification
+	if billCls != "" {
+		billCls = fmt.Sprintf("%s ", billCls)
+	}
 	url := fmt.Sprintf("https://chicago.councilmatic.org/legislation/%s", strings.ToLower(billId))
 	if len(ocdBill.Actions) == 0 {
-		return fmt.Sprintf("%s. See more at %s #%s", billId, url, b.BillID)
+		return fmt.Sprintf("%s%s. See more at %s #%s", billCls, billId, url, b.BillID)
 	}
 	action := ocdBill.Actions[len(ocdBill.Actions)-1]
 
-	var actionText string = billId
+	actionText := fmt.Sprintf("%s%s", billCls, billId)
 	classification := ""
 	if len(action.Classification) > 0 {
 		classification = action.Classification[0]
 	}
 	switch cls := classification; cls {
 	case "introduction":
-		actionText = fmt.Sprintf("%s was introduced in %s", billId, action.Organization.Name)
+		actionText = fmt.Sprintf("%s%s was introduced in %s", billCls, billId, action.Organization.Name)
 	case "filing":
-		actionText = fmt.Sprintf("%s was placed on file", billId)
+		actionText = fmt.Sprintf("%s%s was placed on file", billCls, billId)
 	case "committee-referral", "referral-committee":
 		if len(action.RelatedEntities) > 0 {
-			actionText = fmt.Sprintf("%s was referred to the %s", billId, action.RelatedEntities[0].Name)
+			actionText = fmt.Sprintf("%s%s was referred to the %s", billCls, billId, action.RelatedEntities[0].Name)
 		} else {
-			actionText = fmt.Sprintf("%s was referred to committee", billId)
+			actionText = fmt.Sprintf("%s%s was referred to committee", billCls, billId)
 		}
 	case "committee-passage-favorable":
-		actionText = fmt.Sprintf("%s was recommended to pass by the %s", billId, action.Organization.Name)
+		actionText = fmt.Sprintf("%s%s was recommended to pass by the %s", billCls, billId, action.Organization.Name)
 	case "amendment-passage":
-		actionText = fmt.Sprintf("%s was amended in the %s", billId, action.Organization.Name)
+		actionText = fmt.Sprintf("%s%s was amended in the %s", billCls, billId, action.Organization.Name)
 	case "passage":
-		actionText = fmt.Sprintf("%s passed", billId)
+		actionText = fmt.Sprintf("%s%s passed", billCls, billId)
 	case "executive-signature":
-		actionText = fmt.Sprintf("%s was signed by the mayor", billId)
+		actionText = fmt.Sprintf("%s%s was signed by the mayor", billCls, billId)
 	}
 
 	return fmt.Sprintf("%s. See more at %s #%s", actionText, url, b.BillID)

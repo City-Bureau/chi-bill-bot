@@ -31,17 +31,17 @@ func TestParseBillID(t *testing.T) {
 	}
 }
 
-func TestGetAPIBillID(t *testing.T) {
+func TestGetCleanBillID(t *testing.T) {
 	var apiBillId string
 	bill := Bill{BillID: "O20151111"}
-	apiBillId = bill.GetAPIBillID()
+	apiBillId = bill.GetCleanBillID()
 	if apiBillId != "O2015-1111" {
-		t.Errorf("GetAPIBillID should return 'O2015-1111', got %s", apiBillId)
+		t.Errorf("GetCleanBillID should return 'O2015-1111', got %s", apiBillId)
 	}
 	bill.BillID = "FL20101"
-	apiBillId = bill.GetAPIBillID()
+	apiBillId = bill.GetCleanBillID()
 	if apiBillId != "FL2010-1" {
-		t.Errorf("GetAPIBillID should return 'FL2010-1', got %s", apiBillId)
+		t.Errorf("GetCleanBillID should return 'FL2010-1', got %s", apiBillId)
 	}
 }
 
@@ -55,51 +55,41 @@ func TestSetNextRun(t *testing.T) {
 
 func TestCreateTweet(t *testing.T) {
 	bill := Bill{
-		BillID: "O201011",
-		Data:   `{"extras": {"local_classification": "Ordinance"}, "actions": []}`,
+		Classification: "Ordinance",
+		URL: "https://chicago.legistar.com",
+		BillID:         "O201011",
+		Data:           `[]`,
 	}
-	tweetEnd := "See more at https://chicago.councilmatic.org/legislation/o2010-11 #O201011"
+	tweetEnd := "See more at https://chicago.legistar.com #O201011"
 	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11. %s", tweetEnd) {
 		t.Errorf("Tweet with no actions is incorrect: %s", bill.CreateTweet())
 	}
-	bill.Data = `{"extras": {"local_classification": "Ordinance"}, "actions": [{"classification": ["fake"]}]}`
+	bill.Data = `[{"action": "fake"}]`
 	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11. %s", tweetEnd) {
 		t.Errorf("Tweet with invalid action is incorrect: %s", bill.CreateTweet())
 	}
-	bill.Data = `{"extras": {"local_classification": "Ordinance"}, "actions": [{"classification": ["introduction"], "organization": {"name": "Chicago City Council"}}]}`
+	bill.Data = `[{"action": "Introduced", "actor": "Chicago City Council"}]`
 	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11 was introduced in Chicago City Council. %s", tweetEnd) {
 		t.Errorf("Tweet for introduction is incorrect: %s", bill.CreateTweet())
 	}
-	bill.Data = `{"extras": {"local_classification": "Ordinance"}, "actions": [{"classification": ["committee-referral"]}]}`
+	bill.Data = `[{"action": "Referred"}]`
 	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11 was referred to committee. %s", tweetEnd) {
 		t.Errorf("Tweet for referral with no entity is incorrect: %s", bill.CreateTweet())
 	}
-	bill.Data = `{"extras": {"local_classification": "Ordinance"}, "actions": [{"classification": ["referral-committee"], "related_entities": [{"name": "Test Committee"}]}]}`
+	bill.Data = `[{"action": "Referred", "actor": "", "committee": "Test Committee"}]`
 	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11 was referred to the Test Committee. %s", tweetEnd) {
-		t.Errorf("Tweet for referral with entity is incorrect: %s", bill.CreateTweet())
+		t.Errorf("Tweet for referral with committee is incorrect: %s", bill.CreateTweet())
 	}
-	bill.Data = `{"extras": {"local_classification": "Ordinance"}, "actions": [{"classification": ["committee-passage-favorable"], "organization": {"name": "Test Committee"}}]}`
+	bill.Data = `[{"action": "Recommended for Passage", "actor": "Test Committee"}]`
 	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11 was recommended to pass by the Test Committee. %s", tweetEnd) {
 		t.Errorf("Tweet for committee passage is incorrect: %s", bill.CreateTweet())
 	}
-	bill.Data = `{"extras": {"local_classification": "Ordinance"}, "actions": [{"classification": ["amendment-passage"], "organization": {"name": "Test Committee"}}]}`
-	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11 was amended in the Test Committee. %s", tweetEnd) {
-		t.Errorf("Tweet for amendment passage is incorrect: %s", bill.CreateTweet())
-	}
-	bill.Data = `{"extras": {"local_classification": "Ordinance"}, "actions": [{"classification": ["passage"]}]}`
+	bill.Data = `[{"action": "Passed"}]`
 	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11 passed. %s", tweetEnd) {
 		t.Errorf("Tweet for passage is incorrect: %s", bill.CreateTweet())
 	}
-	bill.Data = `{"extras": {"local_classification": "Ordinance"}, "actions": [{"classification": ["executive-signature"]}]}`
-	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11 was signed by the mayor. %s", tweetEnd) {
-		t.Errorf("Tweet for executive signature is incorrect: %s", bill.CreateTweet())
-	}
-	bill.Data = `{"extras": {"local_classification": "Ordinance"}, "actions": [{"classification": ["passage"]}, {"classification": ["executive-signature"]}]}`
-	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11 was signed by the mayor. %s", tweetEnd) {
-		t.Errorf("Tweet for last action is incorrect: %s", bill.CreateTweet())
-	}
-	bill.Data = `{"extras": {}, "actions": [{"classification": ["passage"]}]}`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11 passed. %s", tweetEnd) {
-		t.Errorf("Tweet missing classification is incorrect: %s", bill.CreateTweet())
+	bill.Data = `[{"action": "Passed"}, {"action": "Referred"}]`
+	if bill.CreateTweet() != fmt.Sprintf("Ordinance O2010-11 passed. %s", tweetEnd) {
+		t.Errorf("Tweet for most recent action is incorrect: %s", bill.CreateTweet())
 	}
 }

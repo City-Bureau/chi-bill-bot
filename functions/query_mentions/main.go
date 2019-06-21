@@ -48,9 +48,12 @@ func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 		if tweetBill.BillID == "" {
 			continue
 		}
-		billData, _ := tweetBill.LoadBillData()
-		billJson, _ := json.Marshal(billData)
-		tweetBill.Data = string(billJson)
+		billUrl, _ := tweetBill.SearchBill()
+		tweetBill.URL = billUrl
+		cls, actions, _ := tweetBill.FetchBillData()
+		tweetBill.Classification = cls
+		actionJson, _ := json.Marshal(actions)
+		tweetBill.Data = string(actionJson)
 		tweetBillJson, _ := json.Marshal(tweetBill)
 		err = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"), "handle_tweet")
 		if err != nil {

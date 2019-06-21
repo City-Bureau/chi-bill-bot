@@ -39,6 +39,7 @@ func handler(request events.CloudWatchEvent) error {
 	)
 
 	for _, bill := range bills {
+		log.Println(bill.BillID)
 		// Log errors but don't exit since we can just ignore them here
 		billJson, err := json.Marshal(bill)
 		if err != nil {

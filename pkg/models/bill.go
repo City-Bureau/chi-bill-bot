@@ -3,148 +3,49 @@ package models
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
-type Sponsorship struct {
-	Type           string `json:"entity_type"`
-	Name           string `json:"entity_name"`
-	ID             string `json:"entity_id"`
-	Classification string `json:"classification"`
-	Primary        bool   `json:"primary"`
-}
-
-type Organization struct {
-	Name string `json:"name"`
-	ID   string `json:"id"`
-}
-
-type Entity struct {
-	Type           string `json:"entity_type"`
-	Name           string `json:"name"`
-	PersonID       string `json:"person_id"`
-	OrganizationID string `json:"organizaton_id"`
-}
-
-type Action struct {
-	Date            string   `json:"date"`
-	Description     string   `json:"description"`
-	Classification  []string `json:"classification"`
-	RelatedEntities []Entity `json:"related_entities"`
-	Organization    Organization
-}
-
-type Extras struct {
-	Classification string `json:"local_classification,omitempty"`
-}
-
-type OCDBill struct {
-	ID             string        `json:"id"`
-	Identifier     string        `json:"identifier"`
-	CreatedAt      string        `json:"created_at"`
-	UpdatedAt      string        `json:"updated_at"`
-	Title          string        `json:"title"`
-	Classification []string      `json:"classification"`
-	Sponsorships   []Sponsorship `json:"sponsorships,omitempty"`
-	Actions        []Action      `json:"actions,omitempty"`
-	Entities       []Entity      `json:"related_entities,omitempty"`
-	Extras         Extras
-}
-
-type OCDResponse struct {
-	Results []OCDBill `json:"results"`
+type LegistarAction struct {
+	Date      time.Time `json:"date,omitempty"`
+	Actor     string    `json:"actor,omitempty"`
+	Action    string    `json:"action,omitempty"`
+	Committee string    `json:"committee,omitempty"`
 }
 
 type Bill struct {
-	PK          uint   `gorm:"primary_key"`
-	TweetID     *int64 `json:"tweet_id,omitempty"`
-	TweetUser   string `gorm:"size:250" json:"tweet_user"`
-	TweetText   string `gorm:"size:300" json:"tweet_text"`
-	LastTweetID *int64 `json:"last_tweet_id,omitempty"`
-	BillID      string `gorm:"size:25" json:"id,omitempty"`
-	Active      bool   `gorm:"default:true"`
-	Data        string `gorm:"type:text"`
-	NextRun     *time.Time
-}
-
-func GetOCDRes(url string) ([]byte, error) {
-	client := http.Client{
-		Timeout: time.Second * 180,
-	}
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	res, getErr := client.Do(req)
-	if getErr != nil {
-		log.Fatal(getErr)
-	}
-
-	body, readErr := ioutil.ReadAll(res.Body)
-	if readErr != nil {
-		log.Fatal(readErr)
-	}
-
-	return body, nil
+	PK             uint   `gorm:"primary_key"`
+	TweetID        *int64 `json:"tweet_id,omitempty"`
+	TweetUser      string `gorm:"size:250" json:"tweet_user"`
+	TweetText      string `gorm:"size:300" json:"tweet_text"`
+	LastTweetID    *int64 `json:"last_tweet_id,omitempty"`
+	BillID         string `gorm:"size:25" json:"id,omitempty"`
+	Classification string `gorm:"size:250" json:"classification"`
+	URL            string `gorm:"size:250" json:"url"`
+	Active         bool   `gorm:"default:true"`
+	Data           string `gorm:"type:text"`
+	NextRun        *time.Time
 }
 
 func (b *Bill) ParseBillID(text string) string {
 	billRe := regexp.MustCompile(`[a-zA-Z]{1,4}[\-\s]*\d{4}[\-\s]*\d{1,5}`)
 	spacerRe := regexp.MustCompile(`[\s-]+`)
 	billText := billRe.FindString(text)
-	return strings.ToUpper(spacerRe.ReplaceAllLiteralString(billText, ""))
+	billUpper := strings.ToUpper(spacerRe.ReplaceAllLiteralString(billText, ""))
+	// Special exception for Orders
+	return strings.Replace(billUpper, "OR", "Or", 1)
 }
 
-func (b *Bill) LoadBillData() (OCDBill, error) {
-	apiBillId := b.GetAPIBillID()
-	billsUrl := fmt.Sprintf("https://ocd.datamade.us/bills/?identifier=%s", apiBillId)
-	billsRes, _ := GetOCDRes(billsUrl)
-	var billsOcdRes OCDResponse
-	jsonErr := json.Unmarshal(billsRes, &billsOcdRes)
-	if jsonErr != nil {
-		log.Fatal(jsonErr)
-	}
-
-	if len(billsOcdRes.Results) == 0 {
-		return OCDBill{}, nil
-	}
-
-	billUrl := fmt.Sprintf("https://ocd.datamade.us/%s", billsOcdRes.Results[0].ID)
-	billRes, _ := GetOCDRes(billUrl)
-	var billOcd OCDBill
-	billJsonErr := json.Unmarshal(billRes, &billOcd)
-	if billJsonErr != nil {
-		log.Fatal(billJsonErr)
-	}
-
-	return billOcd, nil
-}
-
-func (b *Bill) GetOCDBillData() (OCDBill, error) {
-	var billOcd OCDBill
-
-	initBillOcd := b.GetOCDBill()
-	url := fmt.Sprintf("https://ocd.datamade.us/%s", initBillOcd.ID)
-	ocdRes, _ := GetOCDRes(url)
-
-	jsonErr := json.Unmarshal(ocdRes, &billOcd)
-	if jsonErr != nil {
-		log.Fatal(jsonErr)
-	}
-
-	return billOcd, nil
-}
-
-func (b *Bill) GetAPIBillID() string {
+func (b *Bill) GetCleanBillID() string {
 	// Return bill ID in format for API
-	billRe := regexp.MustCompile(`(?P<type>[A-Z]+)(?P<year>\d{4})(?P<id>\d+)`)
+	billRe := regexp.MustCompile(`(?P<type>[A-Za-z]+)(?P<year>\d{4})(?P<id>\d+)`)
 	billMatch := billRe.FindStringSubmatch(b.BillID)
 	result := make(map[string]string)
 	for i, name := range billRe.SubexpNames() {
@@ -155,56 +56,141 @@ func (b *Bill) GetAPIBillID() string {
 	return fmt.Sprintf("%s%s-%s", result["type"], result["year"], result["id"])
 }
 
-func (b *Bill) GetOCDBill() OCDBill {
-	var billData OCDBill
+func (b *Bill) GetActions() []LegistarAction {
+	var actions []LegistarAction
 
-	err := json.Unmarshal([]byte(b.Data), &billData)
+	err := json.Unmarshal([]byte(b.Data), &actions)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return billData
+	return actions
+}
+
+func (b *Bill) SearchBill() (string, error) {
+	response, err := http.Get("https://chicago.legistar.com/Legislation.aspx")
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	document, err := goquery.NewDocumentFromReader(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	viewstate, _ := document.Find("input[name='__VIEWSTATE']").First().Attr("value")
+	eventvalidation, _ := document.Find("input[name='__EVENTVALIDATION']").First().Attr("value")
+	payload := url.Values{
+		"__EVENTARGUMENT":                                        {""},
+		"__VIEWSTATE":                                            {viewstate},
+		"__EVENTVALIDATION":                                      {eventvalidation},
+		"ctl00$ContentPlaceHolder1$txtFil":                       {b.GetCleanBillID()},
+		"ctl00_ContentPlaceHolder1_lstMax_ClientState":           {"{\"value\":\"1000000\"}"},
+		"ctl00_ContentPlaceHolder1_lstYearsAdvanced_ClientState": {"{\"value\":\"All\"}"},
+		"ctl00$ContentPlaceHolder1$btnSearch":                    {"Search Legislation"},
+	}
+	response, err = http.PostForm("https://chicago.legistar.com/Legislation.aspx", payload)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	document, err = goquery.NewDocumentFromReader(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var billUrl string
+	document.Find(".rgMasterTable tbody tr > td:first-child a").Each(func(index int, element *goquery.Selection) {
+		if element != nil && strings.Trim(element.Text(), " ") == b.GetCleanBillID() {
+			billUrl, _ = element.Attr("href")
+		}
+	})
+
+	return fmt.Sprintf("https://chicago.legistar.com/%s", billUrl), nil
+}
+
+func (b *Bill) FetchBillData() (string, []LegistarAction, error) {
+	var actions []LegistarAction
+
+	response, err := http.Get(b.URL)
+	if err != nil {
+		return "", actions, err
+	}
+	defer response.Body.Close()
+
+	document, err := goquery.NewDocumentFromReader(response.Body)
+	if err != nil {
+		return "", actions, err
+	}
+
+	status := strings.Trim(document.Find("#ctl00_ContentPlaceHolder1_lblStatus2").First().Text(), "\n\t ")
+	classification := strings.Trim(document.Find("#ctl00_ContentPlaceHolder1_lblType2").First().Text(), "\n\t ")
+	committee := strings.Trim(document.Find("#ctl00_ContentPlaceHolder1_hypInControlOf2").First().Text(), "\n\t ")
+
+	document.Find(".rgMasterTable tbody tr").Each(func(index int, element *goquery.Selection) {
+		action := LegistarAction{}
+		element.Find("td").Each(func(tdIdx int, tdEl *goquery.Selection) {
+			if tdIdx == 0 {
+				action.Date, _ = time.Parse("1/2/2006", strings.Trim(tdEl.Text(), "\n\t "))
+			} else if tdIdx == 2 {
+				action.Actor = strings.Trim(tdEl.Text(), "\n\t ")
+			} else if tdIdx == 3 {
+				action.Action = strings.Trim(tdEl.Text(), "\n\t ")
+				if action.Action == "" {
+					action.Action = status
+				}
+			}
+			if strings.Contains(action.Action, "Referred") {
+				action.Committee = committee
+			}
+		})
+		actions = append(actions, action)
+	})
+	return classification, actions, nil
 }
 
 func (b *Bill) CreateTweet() string {
-	billId := b.GetAPIBillID()
-	ocdBill := b.GetOCDBill()
-	billCls := ocdBill.Extras.Classification
+	billId := b.GetCleanBillID()
+	billCls := b.Classification
+	actions := b.GetActions()
 	if billCls != "" {
 		billCls = fmt.Sprintf("%s ", billCls)
 	}
-	url := fmt.Sprintf("https://chicago.councilmatic.org/legislation/%s", strings.ToLower(billId))
-	if len(ocdBill.Actions) == 0 {
-		return fmt.Sprintf("%s%s. See more at %s #%s", billCls, billId, url, b.BillID)
+	if len(actions) == 0 {
+		return fmt.Sprintf("%s%s. See more at %s #%s", billCls, billId, b.URL, b.BillID)
 	}
-	action := ocdBill.Actions[len(ocdBill.Actions)-1]
-
+	// Pull the first action which is the most recent on Legistar
+	action := actions[0]
 	actionText := fmt.Sprintf("%s%s", billCls, billId)
-	classification := ""
-	if len(action.Classification) > 0 {
-		classification = action.Classification[0]
-	}
-	switch cls := classification; cls {
-	case "introduction":
-		actionText = fmt.Sprintf("%s%s was introduced in %s", billCls, billId, action.Organization.Name)
-	case "filing":
+	switch cls := action.Action; cls {
+	case "Introduced", "Direct Introduction":
+		actionText = fmt.Sprintf("%s%s was introduced in %s", billCls, billId, action.Actor)
+	case "Placed on File":
 		actionText = fmt.Sprintf("%s%s was placed on file", billCls, billId)
-	case "committee-referral", "referral-committee":
-		if len(action.RelatedEntities) > 0 {
-			actionText = fmt.Sprintf("%s%s was referred to the %s", billCls, billId, action.RelatedEntities[0].Name)
+	case "Referred", "Re-Referred":
+		if action.Committee != "" {
+			actionText = fmt.Sprintf("%s%s was referred to the %s", billCls, billId, action.Committee)
 		} else {
 			actionText = fmt.Sprintf("%s%s was referred to committee", billCls, billId)
 		}
-	case "committee-passage-favorable":
-		actionText = fmt.Sprintf("%s%s was recommended to pass by the %s", billCls, billId, action.Organization.Name)
-	case "amendment-passage":
-		actionText = fmt.Sprintf("%s%s was amended in the %s", billCls, billId, action.Organization.Name)
-	case "passage":
+	case "Recommended for Passage":
+		actionText = fmt.Sprintf("%s%s was recommended to pass by the %s", billCls, billId, action.Actor)
+	case "Recommended Do Not Pass":
+		actionText = fmt.Sprintf("%s%s was recommended not to pass by the %s", billCls, billId, action.Actor)
+	case "Recommended for Re-referral":
+		actionText = fmt.Sprintf("%s%s was recommended for re-referral by the %s", billCls, billId, action.Actor)
+	case "Passed", "Passed as Substitute":
 		actionText = fmt.Sprintf("%s%s passed", billCls, billId)
-	case "executive-signature":
-		actionText = fmt.Sprintf("%s%s was signed by the mayor", billCls, billId)
+	case "Failed to Pass":
+		actionText = fmt.Sprintf("%s%s failed to pass", billCls, billId)
+	case "Introduced (Agreed Calendar)", "Adopted":
+		actionText = fmt.Sprintf("%s%s was adopted", billCls, billId)
+	case "Approved", "Repealed", "Vetoed", "Tabled", "Withdrawn":
+		actionText = fmt.Sprintf("%s%s was %s", billCls, billId, strings.ToLower(cls))
 	}
 
-	return fmt.Sprintf("%s. See more at %s #%s", actionText, url, b.BillID)
+	return fmt.Sprintf("%s. See more at %s #%s", actionText, b.URL, b.BillID)
 }
 
 func (b *Bill) SetNextRun() {

@@ -29,6 +29,12 @@ func TestParseBillID(t *testing.T) {
 	if bill.ParseBillID("@chicagoledger O2018-7001 test") != "O20187001" {
 		t.Errorf("ParseBillID should parse 'O2018-7001' correctly")
 	}
+	if bill.ParseBillID("@chibillbot test O2019-5305") != "O20195305" {
+		t.Errorf("ParseBillID should parse 'O2019-5305' correctly")
+	}
+	if bill.ParseBillID("@chibillbot 02019-5305") != "" {
+		t.Errorf("ParseBillID should return an empty string for '02019-5305")
+	}
 }
 
 func TestGetCleanBillID(t *testing.T) {
@@ -56,7 +62,7 @@ func TestSetNextRun(t *testing.T) {
 func TestCreateTweet(t *testing.T) {
 	bill := Bill{
 		Classification: "Ordinance",
-		URL: "https://chicago.legistar.com",
+		URL:            "https://chicago.legistar.com",
 		BillID:         "O201011",
 		Data:           `[]`,
 	}

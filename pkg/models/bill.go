@@ -35,9 +35,9 @@ type Bill struct {
 }
 
 func (b *Bill) ParseBillID(text string) string {
-	billRe := regexp.MustCompile(`[a-zA-Z]{1,4}[\-\s]*\d{4}[\-\s]*\d{1,5}`)
+	billRe := regexp.MustCompile(`(^| )[a-zA-Z]{1,4}[\-\s]*\d{4}[\-\s]*\d{1,5}`)
 	spacerRe := regexp.MustCompile(`[\s-]+`)
-	billText := billRe.FindString(text)
+	billText := strings.Trim(billRe.FindString(text), " ")
 	billUpper := strings.ToUpper(spacerRe.ReplaceAllLiteralString(billText, ""))
 	// Special exception for Orders
 	return strings.Replace(billUpper, "OR", "Or", 1)

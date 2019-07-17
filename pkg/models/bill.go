@@ -37,7 +37,7 @@ type Bill struct {
 func (b *Bill) ParseBillID(text string) string {
 	billRe := regexp.MustCompile(`(^| )[a-zA-Z]{1,4}[\-\s]*\d{4}[\-\s]*\d{1,5}`)
 	spacerRe := regexp.MustCompile(`[\s-]+`)
-	billText := strings.Trim(billRe.FindString(text), " ")
+	billText := strings.TrimSpace(billRe.FindString(text))
 	billUpper := strings.ToUpper(spacerRe.ReplaceAllLiteralString(billText, ""))
 	// Special exception for Orders
 	return strings.Replace(billUpper, "OR", "Or", 1)
@@ -102,7 +102,7 @@ func (b *Bill) SearchBill() (string, error) {
 
 	var billUrl string
 	document.Find(".rgMasterTable tbody tr > td:first-child a").Each(func(index int, element *goquery.Selection) {
-		if element != nil && strings.Trim(element.Text(), " ") == b.GetCleanBillID() {
+		if element != nil && strings.TrimSpace(element.Text()) == b.GetCleanBillID() {
 			billUrl, _ = element.Attr("href")
 		}
 	})
@@ -124,19 +124,19 @@ func (b *Bill) FetchBillData() (string, []LegistarAction, error) {
 		return "", actions, err
 	}
 
-	status := strings.Trim(document.Find("#ctl00_ContentPlaceHolder1_lblStatus2").First().Text(), "\n\t ")
-	classification := strings.Trim(document.Find("#ctl00_ContentPlaceHolder1_lblType2").First().Text(), "\n\t ")
-	committee := strings.Trim(document.Find("#ctl00_ContentPlaceHolder1_hypInControlOf2").First().Text(), "\n\t ")
+	status := strings.TrimSpace(document.Find("#ctl00_ContentPlaceHolder1_lblStatus2").First().Text())
+	classification := strings.TrimSpace(document.Find("#ctl00_ContentPlaceHolder1_lblType2").First().Text())
+	committee := strings.TrimSpace(document.Find("#ctl00_ContentPlaceHolder1_hypInControlOf2").First().Text())
 
 	document.Find(".rgMasterTable tbody tr").Each(func(index int, element *goquery.Selection) {
 		action := LegistarAction{}
 		element.Find("td").Each(func(tdIdx int, tdEl *goquery.Selection) {
 			if tdIdx == 0 {
-				action.Date, _ = time.Parse("1/2/2006", strings.Trim(tdEl.Text(), "\n\t "))
+				action.Date, _ = time.Parse("1/2/2006", strings.TrimSpace(tdEl.Text()))
 			} else if tdIdx == 2 {
-				action.Actor = strings.Trim(tdEl.Text(), "\n\t ")
+				action.Actor = strings.TrimSpace(tdEl.Text())
 			} else if tdIdx == 3 {
-				action.Action = strings.Trim(tdEl.Text(), "\n\t ")
+				action.Action = strings.TrimSpace(tdEl.Text())
 				if action.Action == "" {
 					action.Action = status
 				}

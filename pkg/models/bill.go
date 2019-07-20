@@ -27,6 +27,7 @@ type Bill struct {
 	TweetText      string `gorm:"size:300" json:"tweet_text"`
 	LastTweetID    *int64 `json:"last_tweet_id,omitempty"`
 	BillID         string `gorm:"size:25" json:"id,omitempty"`
+	Title          string `gorm:"size:250" json:"title"`
 	Classification string `gorm:"size:250" json:"classification"`
 	URL            string `gorm:"size:250" json:"url"`
 	Active         bool   `gorm:"default:true"`
@@ -110,22 +111,23 @@ func (b *Bill) SearchBill() (string, error) {
 	return fmt.Sprintf("https://chicago.legistar.com/%s", billUrl), nil
 }
 
-func (b *Bill) FetchBillData() (string, []LegistarAction, error) {
+func (b *Bill) FetchBillData() (string, string, []LegistarAction, error) {
 	var actions []LegistarAction
 
 	response, err := http.Get(b.URL)
 	if err != nil {
-		return "", actions, err
+		return "", "", actions, err
 	}
 	defer response.Body.Close()
 
 	document, err := goquery.NewDocumentFromReader(response.Body)
 	if err != nil {
-		return "", actions, err
+		return "", "", actions, err
 	}
 
-	status := strings.TrimSpace(document.Find("#ctl00_ContentPlaceHolder1_lblStatus2").First().Text())
+	title := strings.TrimSpace(document.Find("#ctl00_ContentPlaceHolder1_lblTitle2").First().Text())
 	classification := strings.TrimSpace(document.Find("#ctl00_ContentPlaceHolder1_lblType2").First().Text())
+	status := strings.TrimSpace(document.Find("#ctl00_ContentPlaceHolder1_lblStatus2").First().Text())
 	committee := strings.TrimSpace(document.Find("#ctl00_ContentPlaceHolder1_hypInControlOf2").First().Text())
 
 	document.Find(".rgMasterTable tbody tr").Each(func(index int, element *goquery.Selection) {
@@ -147,50 +149,74 @@ func (b *Bill) FetchBillData() (string, []LegistarAction, error) {
 		})
 		actions = append(actions, action)
 	})
-	return classification, actions, nil
+	return title, classification, actions, nil
 }
 
 func (b *Bill) CreateTweet() string {
 	billId := b.GetCleanBillID()
-	billCls := b.Classification
+	billTitle := b.Title
 	actions := b.GetActions()
-	if billCls != "" {
-		billCls = fmt.Sprintf("%s ", billCls)
+	if billTitle != "" {
+		billTitle = fmt.Sprintf("%s: %s", billId, billTitle)
+	} else {
+		billTitle = billId
 	}
-	if len(actions) == 0 {
-		return fmt.Sprintf("%s%s. See more at %s #%s", billCls, billId, b.URL, b.BillID)
-	}
-	// Pull the first action which is the most recent on Legistar
-	action := actions[0]
-	actionText := fmt.Sprintf("%s%s", billCls, billId)
-	switch cls := action.Action; cls {
-	case "Introduced", "Direct Introduction":
-		actionText = fmt.Sprintf("%s%s was introduced in %s", billCls, billId, action.Actor)
-	case "Placed on File":
-		actionText = fmt.Sprintf("%s%s was placed on file", billCls, billId)
-	case "Referred", "Re-Referred":
-		if action.Committee != "" {
-			actionText = fmt.Sprintf("%s%s was referred to the %s", billCls, billId, action.Committee)
-		} else {
-			actionText = fmt.Sprintf("%s%s was referred to committee", billCls, billId)
-		}
-	case "Recommended for Passage":
-		actionText = fmt.Sprintf("%s%s was recommended to pass by the %s", billCls, billId, action.Actor)
-	case "Recommended Do Not Pass":
-		actionText = fmt.Sprintf("%s%s was recommended not to pass by the %s", billCls, billId, action.Actor)
-	case "Recommended for Re-referral":
-		actionText = fmt.Sprintf("%s%s was recommended for re-referral by the %s", billCls, billId, action.Actor)
-	case "Passed", "Passed as Substitute":
-		actionText = fmt.Sprintf("%s%s passed", billCls, billId)
-	case "Failed to Pass":
-		actionText = fmt.Sprintf("%s%s failed to pass", billCls, billId)
-	case "Introduced (Agreed Calendar)", "Adopted":
-		actionText = fmt.Sprintf("%s%s was adopted", billCls, billId)
-	case "Approved", "Repealed", "Vetoed", "Tabled", "Withdrawn":
-		actionText = fmt.Sprintf("%s%s was %s", billCls, billId, strings.ToLower(cls))
+	const TWEET_LEN = 280 // Max tweet length
+	const URL_LEN = 23    // Twitter cap for URL characters
+	baseChars := len(fmt.Sprintf(" See more at  #%s", b.BillID)) + URL_LEN
+
+	var actionStr string
+	var actionText string
+	var action LegistarAction
+
+	// Pull the first action which is the most recent on Legistar, otherwise leave empty
+	if len(actions) > 0 {
+		action = actions[0]
+		actionStr = action.Action
 	}
 
-	return fmt.Sprintf("%s. See more at %s #%s", actionText, b.URL, b.BillID)
+	switch cls := actionStr; cls {
+	case "Introduced", "Direct Introduction":
+		actionText = fmt.Sprintf(" was introduced in %s", action.Actor)
+	case "Placed on File":
+		actionText = " was placed on file"
+	case "Referred", "Re-Referred":
+		if action.Committee != "" {
+			actionText = fmt.Sprintf(" was referred to the %s", action.Committee)
+		} else {
+			actionText = " was referred to committee"
+		}
+	case "Recommended for Passage":
+		actionText = fmt.Sprintf(" was recommended to pass by the %s", action.Actor)
+	case "Recommended Do Not Pass":
+		actionText = fmt.Sprintf(" was recommended not to pass by the %s", action.Actor)
+	case "Recommended for Re-referral":
+		actionText = fmt.Sprintf(" was recommended for re-referral by the %s", action.Actor)
+	case "Passed", "Passed as Substitute":
+		actionText = " passed"
+	case "Failed to Pass":
+		actionText = " failed to pass"
+	case "Introduced (Agreed Calendar)", "Adopted":
+		actionText = " was adopted"
+	case "Approved", "Repealed", "Vetoed", "Tabled", "Withdrawn":
+		actionText = fmt.Sprintf("was %s", strings.ToLower(cls))
+	}
+
+	tweetContent := fmt.Sprintf("%s%s.", billTitle, actionText)
+	if len(tweetContent)+baseChars > TWEET_LEN {
+		// Get the difference to remove (add characters for ellipsis)
+		tweetDiff := (baseChars + len(tweetContent) + 3) - TWEET_LEN
+		var ellipsis string
+		// Only include 2 periods for ellipsis if no action text, since it ends with a period
+		if actionText == "" {
+			ellipsis = ".."
+		} else {
+			ellipsis = "..."
+		}
+		tweetContent = fmt.Sprintf("%s%s%s.", strings.TrimSpace(billTitle[0:len(billTitle)-tweetDiff]), ellipsis, actionText)
+	}
+
+	return fmt.Sprintf("%s See more at %s #%s", tweetContent, b.URL, b.BillID)
 }
 
 func (b *Bill) SetNextRun() {

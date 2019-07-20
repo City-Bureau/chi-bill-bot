@@ -59,7 +59,7 @@ func handler(request events.SNSEvent) error {
 	}
 
 	// Get new data for bill, check if it's changed
-	_, actions, err := bill.FetchBillData()
+	_, _, actions, err := bill.FetchBillData()
 	if err != nil {
 		return err
 	}

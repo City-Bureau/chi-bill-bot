@@ -50,7 +50,8 @@ func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 		}
 		billUrl, _ := tweetBill.SearchBill()
 		tweetBill.URL = billUrl
-		cls, actions, _ := tweetBill.FetchBillData()
+		title, cls, actions, _ := tweetBill.FetchBillData()
+		tweetBill.Title = title
 		tweetBill.Classification = cls
 		actionJson, _ := json.Marshal(actions)
 		tweetBill.Data = string(actionJson)

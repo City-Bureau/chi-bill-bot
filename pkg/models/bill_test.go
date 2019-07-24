@@ -61,7 +61,7 @@ func TestSetNextRun(t *testing.T) {
 
 func TestCreateTweet(t *testing.T) {
 	bill := Bill{
-		Title: "Testing bill",
+		Title:          "Testing bill",
 		Classification: "Ordinance",
 		URL:            "https://chicago.legistar.com",
 		BillID:         "O201011",
@@ -71,9 +71,13 @@ func TestCreateTweet(t *testing.T) {
 	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
 		t.Errorf("Tweet with no actions is incorrect: %s", bill.CreateTweet())
 	}
-	bill.Data = `[{"action": "fake"}]`
+	bill.Data = `[{"action": "Add Co-Sponsor(s)"}]`
+	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill add co-sponsor(s). %s", tweetEnd) {
+		t.Errorf("Tweet with alternate action is incorrect: %s", bill.CreateTweet())
+	}
+	bill.Data = `[{"action": ""}]`
 	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
-		t.Errorf("Tweet with invalid action is incorrect: %s", bill.CreateTweet())
+		t.Errorf("Tweet with empty action is incorrect: %s", bill.CreateTweet())
 	}
 	bill.Data = `[{"action": "Introduced", "actor": "Chicago City Council"}]`
 	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill was introduced in Chicago City Council. %s", tweetEnd) {

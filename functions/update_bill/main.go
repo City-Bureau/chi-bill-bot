@@ -59,10 +59,12 @@ func handler(request events.SNSEvent) error {
 	}
 
 	// Get new data for bill, check if it's changed
-	_, _, actions, err := bill.FetchBillData()
+	title, cls, actions, err := bill.FetchBillData()
 	if err != nil {
 		return err
 	}
+	bill.Title = title
+	bill.Classification = cls
 
 	err = UpdateBill(bill, actions, snsClient)
 	// Only log this error since it just prevented

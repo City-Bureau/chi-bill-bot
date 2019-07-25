@@ -152,7 +152,25 @@ func (b *Bill) FetchBillData() (string, string, []LegistarAction, error) {
 	return title, classification, actions, nil
 }
 
-func (b *Bill) CreateTweet() string {
+func (b *Bill) GetTweetURL() string {
+	councilmaticUrl := fmt.Sprintf(
+		"https://chicago.councilmatic.org/legislation/%s/",
+		strings.ToLower(b.GetCleanBillID()),
+	)
+	response, err := http.Get(councilmaticUrl)
+	if err != nil {
+		return b.URL
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode == 200 {
+		return councilmaticUrl
+	} else {
+		return b.URL
+	}
+}
+
+func (b *Bill) CreateTweet(billUrl string) string {
 	billId := b.GetCleanBillID()
 	billTitle := b.Title
 	actions := b.GetActions()
@@ -219,7 +237,7 @@ func (b *Bill) CreateTweet() string {
 		tweetContent = fmt.Sprintf("%s%s%s.", strings.TrimSpace(billTitle[0:len(billTitle)-tweetDiff]), ellipsis, actionText)
 	}
 
-	return fmt.Sprintf("%s See more at %s #%s", tweetContent, b.URL, b.BillID)
+	return fmt.Sprintf("%s See more at %s #%s", tweetContent, billUrl, b.BillID)
 }
 
 func (b *Bill) SetNextRun() {

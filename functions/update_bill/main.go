@@ -22,7 +22,8 @@ func UpdateBill(bill models.Bill, actions []models.LegistarAction, snsClient svc
 			return err
 		}
 		bill.Data = string(actionJson)
-		data := svc.TweetData{Text: bill.CreateTweet()}
+		billUrl := bill.GetTweetURL()
+		data := svc.TweetData{Text: bill.CreateTweet(billUrl)}
 		tweetJson, err := json.Marshal(data)
 		if err != nil {
 			return err

@@ -67,54 +67,59 @@ func TestCreateTweet(t *testing.T) {
 		BillID:         "O201011",
 		Data:           `[]`,
 	}
-	tweetEnd := "See more at https://chicago.legistar.com #O201011"
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
-		t.Errorf("Tweet with no actions is incorrect: %s", bill.CreateTweet())
+	councilmaticUrl := "https://chicago.councilmatic.com/legislation/o2010-11/"
+	tweetEnd := fmt.Sprintf("See more at %s #O201011", councilmaticUrl)
+	if bill.CreateTweet(councilmaticUrl) != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
+		t.Errorf("Tweet with alternate URL is incorrect: %s", bill.CreateTweet(councilmaticUrl))
+	}
+	tweetEnd = "See more at https://chicago.legistar.com #O201011"
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
+		t.Errorf("Tweet with no actions is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Data = `[{"action": "Add Co-Sponsor(s)"}]`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill add co-sponsor(s). %s", tweetEnd) {
-		t.Errorf("Tweet with alternate action is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill add co-sponsor(s). %s", tweetEnd) {
+		t.Errorf("Tweet with alternate action is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Data = `[{"action": ""}]`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
-		t.Errorf("Tweet with empty action is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
+		t.Errorf("Tweet with empty action is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Data = `[{"action": "Introduced", "actor": "Chicago City Council"}]`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill was introduced in Chicago City Council. %s", tweetEnd) {
-		t.Errorf("Tweet for introduction is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill was introduced in Chicago City Council. %s", tweetEnd) {
+		t.Errorf("Tweet for introduction is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Data = `[{"action": "Referred"}]`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill was referred to committee. %s", tweetEnd) {
-		t.Errorf("Tweet for referral with no entity is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill was referred to committee. %s", tweetEnd) {
+		t.Errorf("Tweet for referral with no entity is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Data = `[{"action": "Referred", "actor": "", "committee": "Test Committee"}]`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill was referred to the Test Committee. %s", tweetEnd) {
-		t.Errorf("Tweet for referral with committee is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill was referred to the Test Committee. %s", tweetEnd) {
+		t.Errorf("Tweet for referral with committee is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Data = `[{"action": "Recommended for Passage", "actor": "Test Committee"}]`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill was recommended to pass by the Test Committee. %s", tweetEnd) {
-		t.Errorf("Tweet for committee passage is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill was recommended to pass by the Test Committee. %s", tweetEnd) {
+		t.Errorf("Tweet for committee passage is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Data = `[{"action": "Passed"}]`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill passed. %s", tweetEnd) {
-		t.Errorf("Tweet for passage is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill passed. %s", tweetEnd) {
+		t.Errorf("Tweet for passage is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Data = `[{"action": "Passed"}, {"action": "Referred"}]`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Testing bill passed. %s", tweetEnd) {
-		t.Errorf("Tweet for most recent action is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill passed. %s", tweetEnd) {
+		t.Errorf("Tweet for most recent action is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Title = ""
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11 passed. %s", tweetEnd) {
-		t.Errorf("Tweet for bill without title is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11 passed. %s", tweetEnd) {
+		t.Errorf("Tweet for bill without title is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Data = `[{"action": "Recommended for Passage", "actor": "Committee on Ethics and Government Oversight"}]`
 	bill.Title = "Certification of city funding requirement for Laborers' and Retirement Board Employees Annuity and Benefit Fund of Chicago for tax year 2020, payment year 2021"
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Certification of city funding requirement for Laborers' and Retirement Board Employees Annuity and Benefit Fund of Chicago for tax year 2020, pay... was recommended to pass by the Committee on Ethics and Government Oversight. %s", tweetEnd) {
-		t.Errorf("Clipped title tweet text with action is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Certification of city funding requirement for Laborers' and Retirement Board Employees Annuity and Benefit Fund of Chicago for tax year 2020, pay... was recommended to pass by the Committee on Ethics and Government Oversight. %s", tweetEnd) {
+		t.Errorf("Clipped title tweet text with action is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 	bill.Title = "Certification of city funding requirement for Laborers' and Retirement Board Employees Annuity and Benefit Fund of Chicago for tax year 2020, payment year 2021                                                                  "
 	bill.Data = `[]`
-	if bill.CreateTweet() != fmt.Sprintf("O2010-11: Certification of city funding requirement for Laborers' and Retirement Board Employees Annuity and Benefit Fund of Chicago for tax year 2020, payment year 2021... %s", tweetEnd) {
-		t.Errorf("Clipped title tweet text with no actions is incorrect: %s", bill.CreateTweet())
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Certification of city funding requirement for Laborers' and Retirement Board Employees Annuity and Benefit Fund of Chicago for tax year 2020, payment year 2021... %s", tweetEnd) {
+		t.Errorf("Clipped title tweet text with no actions is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
 }

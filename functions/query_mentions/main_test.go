@@ -10,15 +10,13 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-const TIME_FORMAT = "Mon Jan 2 15:04:05 -0700 2006"
-
 func TestQueryMentionsIgnoresEmptyBillID(t *testing.T) {
 	tweets := []twitter.Tweet{
 		twitter.Tweet{
 			ID:        1,
 			Text:      "Testing bill",
 			User:      &twitter.User{ScreenName: "testuser"},
-			CreatedAt: time.Now().Format(TIME_FORMAT),
+			CreatedAt: time.Now().Format(time.RubyDate),
 		},
 	}
 	twttrMock := new(mocks.TwitterMock)
@@ -35,7 +33,7 @@ func TestQueryMentionsIgnoresOldTweet(t *testing.T) {
 			ID:        1,
 			Text:      "@chicagoledger O2010-11 Testing bill",
 			User:      &twitter.User{ScreenName: "testuser"},
-			CreatedAt: time.Now().Add(time.Hour * -72).Format(TIME_FORMAT),
+			CreatedAt: time.Now().UTC().Add(time.Hour * -72).Format(time.RubyDate),
 		},
 	}
 	twttrMock := new(mocks.TwitterMock)
@@ -53,7 +51,7 @@ func TestQueryMentionsTweetsBill(t *testing.T) {
 			ID:        1,
 			Text:      "@chicagoledger O2010-11 Testing bill",
 			User:      &twitter.User{ScreenName: "testuser"},
-			CreatedAt: time.Now().Format(TIME_FORMAT),
+			CreatedAt: time.Now().Format(time.RubyDate),
 		},
 	}
 	twttrMock := new(mocks.TwitterMock)

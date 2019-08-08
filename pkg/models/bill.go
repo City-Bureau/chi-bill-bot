@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -244,13 +245,16 @@ func (b *Bill) SetNextRun() {
 	// Set NextRun to a time in the future within a defined range
 	loc, _ := time.LoadLocation("America/Chicago")
 	now := time.Now().In(loc)
-	// Make sure it's between 9AM and 10PM Chicago
+	// Make sure it's between 9AM and 10PM Chicago with some randomness to stagger posts
 	diffHours := 24
+	diffMinutes := 0
 	if now.Hour() < 9 {
-		diffHours = diffHours + (9 - now.Hour())
+		diffHours = diffHours + (9 - now.Hour()) + rand.Intn(4)
+		diffMinutes = rand.Intn(60)
 	} else if now.Hour() > 17 {
-		diffHours = diffHours - (now.Hour() - 17)
+		diffHours = diffHours - (now.Hour() - 17) - rand.Intn(4)
+		diffMinutes = -rand.Intn(60)
 	}
-	nextRun := now.Add(time.Hour * time.Duration(diffHours))
+	nextRun := now.Add(time.Hour * time.Duration(diffHours)).Add(time.Minute * time.Duration(diffMinutes))
 	b.NextRun = &nextRun
 }

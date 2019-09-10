@@ -68,7 +68,7 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 		// Tweet that the new bill is now being tracked, save
 		return SaveBillAndTweet(
 			fmt.Sprintf(
-				"We're now tracking Chicago City Council %s%s. You can follow along with #%s—we'll update you when this legislation moves.",
+				"We're now tracking Chicago City Council %s%s. You can follow along with #%s—we'll tweet when this legislation moves.",
 				billCls,
 				bill.GetCleanBillID(),
 				bill.BillID,
@@ -85,7 +85,7 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 		}
 		return SaveBillAndTweet(
 			fmt.Sprintf(
-				"We're already tracking %s%s. You can follow along with #%s—we'll update you when this legislation moves.",
+				"We're already tracking %s%s. You can follow along with #%s—we'll tweet when this legislation moves.",
 				billCls,
 				bill.GetCleanBillID(),
 				existingBill.BillID,

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestUnmarshalBill(t *testing.T) {
@@ -54,7 +55,12 @@ func TestGetCleanBillID(t *testing.T) {
 func TestSetNextRun(t *testing.T) {
 	bill := Bill{}
 	bill.SetNextRun()
-	if bill.NextRun.Hour() < 9 || bill.NextRun.Hour() > 17 {
+	loc, _ := time.LoadLocation("America/Chicago")
+	now := time.Now().In(loc)
+	_, offset := now.Zone()
+	localHour := bill.NextRun.Hour() + (offset / 3600)
+
+	if localHour < 9 || localHour > 17 {
 		t.Errorf("Hour: %d is outside range 9AM-10PM", bill.NextRun.Hour())
 	}
 }

@@ -9,7 +9,7 @@ You'll need GNU Make, Go and node.js installed as well as credentials for AWS an
 To install dependencies, build functions and deploy:
 
 ```bash
-npm install
+make install
 make build
-sls deploy
+make deploy
 ```

@@ -150,7 +150,7 @@ functions:
         - Ref: ServerlessSubnetB
         - Ref: ServerlessSubnetC
     events:
-      - schedule: rate(4 hours)
+      - schedule: cron(3 2,14,17,20,23 * * ? *)
   update_bill:
     handler: bin/update_bill
     timeout: 120

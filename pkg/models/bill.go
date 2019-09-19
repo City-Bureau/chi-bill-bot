@@ -244,15 +244,18 @@ func (b *Bill) CreateTweet(billUrl string) string {
 func (b *Bill) SetNextRun() {
 	// Set NextRun to a time in the future within a defined range
 	loc, _ := time.LoadLocation("America/Chicago")
-	now := time.Now().In(loc)
+	now := time.Now().Add(time.Hour * time.Duration(12)).In(loc)
+	_, offset := now.Zone()
+
 	// Make sure it's between 9AM and 10PM Chicago with some randomness to stagger posts
+	localHour := now.Hour() + (offset / 3600)
 	diffHours := 24
 	diffMinutes := 0
-	if now.Hour() < 9 {
-		diffHours = diffHours + (9 - now.Hour()) + rand.Intn(4)
+	if localHour < 9 {
+		diffHours = diffHours + (9 - localHour) + rand.Intn(4)
 		diffMinutes = rand.Intn(60)
-	} else if now.Hour() > 17 {
-		diffHours = diffHours - (now.Hour() - 17) - rand.Intn(4)
+	} else if localHour > 17 {
+		diffHours = diffHours - (localHour - 17) - rand.Intn(4)
 		diffMinutes = -rand.Intn(60)
 	}
 	nextRun := now.Add(time.Hour * time.Duration(diffHours)).Add(time.Minute * time.Duration(diffMinutes))

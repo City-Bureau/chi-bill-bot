@@ -86,6 +86,10 @@ func TestCreateTweet(t *testing.T) {
 	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill add co-sponsor(s). %s", tweetEnd) {
 		t.Errorf("Tweet with alternate action is incorrect: %s", bill.CreateTweet(bill.URL))
 	}
+	bill.Data = `[{"action": "Approved"}]`
+	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill was approved. %s", tweetEnd) {
+		t.Errorf("Tweet with fallback action is incorrect: %s", bill.CreateTweet(bill.URL))
+	}
 	bill.Data = `[{"action": ""}]`
 	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
 		t.Errorf("Tweet with empty action is incorrect: %s", bill.CreateTweet(bill.URL))

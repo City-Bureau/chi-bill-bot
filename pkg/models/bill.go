@@ -218,7 +218,7 @@ func (b *Bill) CreateTweet(billUrl string) string {
 	case "Introduced (Agreed Calendar)", "Adopted":
 		actionText = " was adopted"
 	case "Approved", "Repealed", "Vetoed", "Tabled", "Withdrawn":
-		actionText = fmt.Sprintf("was %s", strings.ToLower(cls))
+		actionText = fmt.Sprintf(" was %s", strings.ToLower(cls))
 	case "":
 	default:
 		actionText = fmt.Sprintf(" %s", strings.ToLower(cls))

@@ -20,10 +20,6 @@ func SaveBillAndTweet(text string, bill *models.Bill, snsClient svc.SNSType) err
 	if err != nil {
 		return err
 	}
-	err = snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"), "save_bill")
-	if err != nil {
-		return err
-	}
 	data := svc.TweetData{
 		Text:   fmt.Sprintf("@%s %s", bill.TweetUser, text),
 		Params: twitter.StatusUpdateParams{InReplyToStatusID: *bill.TweetID},
@@ -32,7 +28,11 @@ func SaveBillAndTweet(text string, bill *models.Bill, snsClient svc.SNSType) err
 	if err != nil {
 		return err
 	}
-	return snsClient.Publish(string(tweetJson), os.Getenv("SNS_TOPIC_ARN"), "post_tweet")
+	err = snsClient.Publish(string(tweetJson), os.Getenv("SNS_TOPIC_ARN"), "post_tweet")
+	if err != nil {
+		return err
+	}
+	return snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"), "update_bill")
 }
 
 func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
@@ -68,10 +68,11 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 		// Tweet that the new bill is now being tracked, save
 		return SaveBillAndTweet(
 			fmt.Sprintf(
-				"We're now tracking Chicago City Council %s%s. You can follow along with #%s—we'll tweet when this legislation moves.",
+				"We're now tracking Chicago City Council %s%s. You can follow along with #%s—we'll tweet when this legislation moves. %s",
 				billCls,
 				bill.GetCleanBillID(),
 				bill.BillID,
+				bill.URL,
 			),
 			bill,
 			snsClient,
@@ -85,10 +86,11 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 		}
 		return SaveBillAndTweet(
 			fmt.Sprintf(
-				"We're already tracking %s%s. You can follow along with #%s—we'll tweet when this legislation moves.",
+				"We're already tracking %s%s. You can follow along with #%s—we'll tweet when this legislation moves. %s",
 				billCls,
 				bill.GetCleanBillID(),
 				existingBill.BillID,
+				bill.URL,
 			),
 			&existingBill,
 			snsClient,

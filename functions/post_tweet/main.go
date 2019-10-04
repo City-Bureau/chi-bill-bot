@@ -27,8 +27,9 @@ func handler(request events.SNSEvent) error {
 	twttr := svc.NewTwitterClient()
 	err = twttr.PostTweet(data.Text, &data.Params)
 	if err != nil {
-		if !strings.Contains(err.Error(), "duplicate") {
-			log.Fatal(err)
+		if strings.Contains(err.Error(), "duplicate") {
+			log.Println("Status is a duplicate, ignoring error")
+			return nil
 		}
 	}
 	return err

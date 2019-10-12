@@ -1,7 +1,6 @@
 name: Deploy
 on:
-  check_suite:
-    types: [completed]
+  push:
     branches:
       - master
 
@@ -39,6 +38,9 @@ jobs:
     - run: npm install -g serverless
 
     - run: npm install
+
+    - name: Test
+      run: make test
 
     - name: Build
       run: make build

@@ -1,0 +1,22 @@
+name: CI Checks
+on: [push, pull_request]
+jobs:
+
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v1
+
+    - name: Set up Go 1.12
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.12
+      id: go
+
+    - name: Test
+      run: make test
+
+    - name: Build
+      run: make build

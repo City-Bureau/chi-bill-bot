@@ -4,6 +4,15 @@ provider:
   name: aws
   runtime: go1.x
   stage: prod
+  environment:
+    TWITTER_CONSUMER_KEY: ${env:TWITTER_CONSUMER_KEY}
+    TWITTER_CONSUMER_SECRET: ${env:TWITTER_CONSUMER_SECRET}
+    TWITTER_ACCESS_TOKEN: ${env:TWITTER_ACCESS_TOKEN}
+    TWITTER_ACCESS_SECRET: ${env:TWITTER_ACCESS_SECRET}
+    RDS_DB_NAME: ${env:RDS_DB_NAME}
+    RDS_USERNAME: ${env:RDS_USERNAME}
+    RDS_PASSWORD: ${env:RDS_PASSWORD}
+    SNS_EMAIL: ${env:SNS_EMAIL}
   iamRoleStatements:
     - Effect: Allow
       Action:

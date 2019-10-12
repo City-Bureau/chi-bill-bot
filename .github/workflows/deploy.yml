@@ -1,6 +1,7 @@
 name: Deploy
 on:
-  push:
+  check_suite:
+    types: [completed]
     branches:
       - master
 
@@ -31,10 +32,13 @@ jobs:
         go-version: 1.12
       id: go
 
-    - name: npm install
-      uses: actions/npm@master
+    - uses: actions/setup-node@v1
       with:
-        args: install
+        node-version: '10.x'
+
+    - run: npm install -g serverless
+
+    - run: npm install
 
     - name: Build
       run: make build

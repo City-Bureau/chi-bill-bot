@@ -1,5 +1,7 @@
 # Chicago Bill Bot
 
+[![Build status](https://github.com/City-Bureau/chi-bill-bot/workflows/CI%20Checks/badge.svg)](https://github.com/City-Bureau/chi-bill-bot/actions)
+
 Twitter bot for following Chicago City Council legislation. Tweet a bill identifier at the bot and it will track the bill and post any updates.
 
 ## Setup

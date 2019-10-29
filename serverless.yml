@@ -13,6 +13,8 @@ provider:
     RDS_USERNAME: ${env:RDS_USERNAME}
     RDS_PASSWORD: ${env:RDS_PASSWORD}
     SNS_EMAIL: ${env:SNS_EMAIL}
+  tags:
+    project: chi-bill-bot
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -31,7 +33,7 @@ plugins:
   - serverless-plugin-aws-alerts
 
 custom:
-  topicName: ${self:service}-prod-events
+  topicName: ${self:service}-${self:provider.stage}-events
   AURORA:
     DB_NAME: ${env:RDS_DB_NAME}
     USERNAME: ${env:RDS_USERNAME}
@@ -48,7 +50,7 @@ custom:
       - functionErrors
     topics:
       alarm:
-        topic: ${self:service}-prod-alerts-alarm
+        topic: ${self:service}-${self:provider.stage}-alerts-alarm
         notifications:
           - protocol: email
             endpoint: ${env:SNS_EMAIL}
@@ -182,8 +184,11 @@ resources:
     SNSTopic:
       Type: AWS::SNS::Topic
       Properties:
-        TopicName: ${self:service}-prod-events
+        TopicName: ${self:service}-${self:provider.stage}-events
         DisplayName: ChiBillBotEvents
+        Tags:
+          - Key: project
+            Value: ${self:service}-${self:provider.stage}
     SNSVPCEndpoint:
       Type: AWS::EC2::VPCEndpoint
       DependsOn: SNSTopic
@@ -214,6 +219,9 @@ resources:
         EnableDnsSupport: true
         EnableDnsHostnames: true
         InstanceTenancy: default
+        Tags:
+          - Key: project
+            Value: ${self:service}-${self:provider.stage}
     ServerlessSubnetA:
       DependsOn: ServerlessVPC
       Type: AWS::EC2::Subnet
@@ -222,6 +230,9 @@ resources:
           Ref: ServerlessVPC
         AvailabilityZone: ${self:provider.region}a
         CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.0.0/24'
+        Tags:
+          - Key: project
+            Value: ${self:service}-${self:provider.stage}
     ServerlessSubnetB:
       DependsOn: ServerlessVPC
       Type: AWS::EC2::Subnet
@@ -230,6 +241,9 @@ resources:
           Ref: ServerlessVPC
         AvailabilityZone: ${self:provider.region}b
         CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.1.0/24'
+        Tags:
+          - Key: project
+            Value: ${self:service}-${self:provider.stage}
     ServerlessSubnetC:
       DependsOn: ServerlessVPC
       Type: AWS::EC2::Subnet
@@ -238,6 +252,9 @@ resources:
           Ref: ServerlessVPC
         AvailabilityZone: ${self:provider.region}c
         CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.2.0/24'
+        Tags:
+          - Key: project
+            Value: ${self:service}-${self:provider.stage}
     AuroraSubnetGroup:
       Type: AWS::RDS::DBSubnetGroup
       Properties:
@@ -246,6 +263,9 @@ resources:
           - Ref: ServerlessSubnetA
           - Ref: ServerlessSubnetB
           - Ref: ServerlessSubnetC
+        Tags:
+          - Key: project
+            Value: ${self:service}-${self:provider.stage}
     AuroraRDSCluster:
       Type: "AWS::RDS::DBCluster"
       Properties:
@@ -260,3 +280,6 @@ resources:
         BackupRetentionPeriod: 3
         VpcSecurityGroupIds:
           - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
+        Tags:
+          - Key: project
+            Value: ${self:service}-${self:provider.stage}

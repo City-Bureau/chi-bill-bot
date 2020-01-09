@@ -1,23 +1,31 @@
 name: CI Checks
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - "*"
 
 jobs:
-
   check:
     name: Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v1
 
-    - uses: actions/checkout@v1
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.12
 
-    - name: Set up Go 1.12
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.12
-      id: go
+      - run: make test
 
-    - name: Test
-      run: make test
+      - run: make format
 
-    - name: Build
-      run: make build
+      - uses: grandcolline/golang-github-actions@v1.1.0
+        with:
+          run: lint
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: make build

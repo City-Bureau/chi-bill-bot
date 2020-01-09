@@ -1,4 +1,4 @@
-.PHONY: install test build deploy clean
+.PHONY: install test format lint build deploy clean
 
 functions := $(shell find functions -name \*main.go | awk -F'/' '{print $$2}')
 
@@ -7,6 +7,12 @@ install:
 
 test:
 	go test ./...
+
+format:
+	test -z $$(gofmt -l .)
+
+lint:
+	golint -set_exit_status ./...
 
 build:
 	@for function in $(functions) ; do \

@@ -14,6 +14,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+// LegistarAction represents a single action taken on legislation
 type LegistarAction struct {
 	Date      time.Time `json:"date,omitempty"`
 	Actor     string    `json:"actor,omitempty"`
@@ -21,6 +22,7 @@ type LegistarAction struct {
 	Committee string    `json:"committee,omitempty"`
 }
 
+// Bill is a single bill object in the database
 type Bill struct {
 	PK             uint   `gorm:"primary_key"`
 	TweetID        *int64 `json:"tweet_id,omitempty"`
@@ -36,6 +38,7 @@ type Bill struct {
 	NextRun        *time.Time
 }
 
+// ParseBillID pulls the bill identifier from a given string
 func (b *Bill) ParseBillID(text string) string {
 	billRe := regexp.MustCompile(`(^| )[a-zA-Z]{1,4}[\-\s]*\d{4}[\-\s]*\d{1,5}`)
 	spacerRe := regexp.MustCompile(`[\s-]+`)
@@ -45,6 +48,7 @@ func (b *Bill) ParseBillID(text string) string {
 	return strings.Replace(billUpper, "OR", "Or", 1)
 }
 
+// GetCleanBillID returns the bill ID in a format for presentation
 func (b *Bill) GetCleanBillID() string {
 	// Return bill ID in format for API
 	billRe := regexp.MustCompile(`(?P<type>[A-Za-z]+)(?P<year>\d{4})(?P<id>\d+)`)
@@ -58,6 +62,7 @@ func (b *Bill) GetCleanBillID() string {
 	return fmt.Sprintf("%s%s-%s", result["type"], result["year"], result["id"])
 }
 
+// GetActions loads all actions from a bill's JSON data as LegistarAction objects
 func (b *Bill) GetActions() []LegistarAction {
 	var actions []LegistarAction
 
@@ -68,6 +73,7 @@ func (b *Bill) GetActions() []LegistarAction {
 	return actions
 }
 
+// SearchBill tries to find the detail page for a bill from Legistar
 func (b *Bill) SearchBill() (string, error) {
 	response, err := http.Get("https://chicago.legistar.com/Legislation.aspx")
 	if err != nil {
@@ -102,16 +108,17 @@ func (b *Bill) SearchBill() (string, error) {
 		return "", err
 	}
 
-	var billUrl string
+	var billURL string
 	document.Find(".rgMasterTable tbody tr > td:first-child a").Each(func(index int, element *goquery.Selection) {
 		if element != nil && strings.TrimSpace(element.Text()) == b.GetCleanBillID() {
-			billUrl, _ = element.Attr("href")
+			billURL, _ = element.Attr("href")
 		}
 	})
 
-	return fmt.Sprintf("https://chicago.legistar.com/%s", billUrl), nil
+	return fmt.Sprintf("https://chicago.legistar.com/%s", billURL), nil
 }
 
+// FetchBillData pulls updated LegistarAction information from a bill's detail URL
 func (b *Bill) FetchBillData() (string, string, []LegistarAction, error) {
 	var actions []LegistarAction
 
@@ -153,36 +160,38 @@ func (b *Bill) FetchBillData() (string, string, []LegistarAction, error) {
 	return title, classification, actions, nil
 }
 
+// GetTweetURL returns the Councilmatic URL if it exists for display and defaults
+// to returning the bill's Legistar URL
 func (b *Bill) GetTweetURL() string {
-	councilmaticUrl := fmt.Sprintf(
+	councilmaticURL := fmt.Sprintf(
 		"https://chicago.councilmatic.org/legislation/%s/",
 		strings.ToLower(b.GetCleanBillID()),
 	)
-	response, err := http.Get(councilmaticUrl)
+	response, err := http.Get(councilmaticURL)
 	if err != nil {
 		return b.URL
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode == 200 {
-		return councilmaticUrl
-	} else {
-		return b.URL
+		return councilmaticURL
 	}
+	return b.URL
 }
 
-func (b *Bill) CreateTweet(billUrl string) string {
-	billId := b.GetCleanBillID()
+// CreateTweet makes a tweet string based on the bill's information
+func (b *Bill) CreateTweet(billURL string) string {
+	billID := b.GetCleanBillID()
 	billTitle := b.Title
 	actions := b.GetActions()
 	if billTitle != "" {
-		billTitle = fmt.Sprintf("%s: %s", billId, billTitle)
+		billTitle = fmt.Sprintf("%s: %s", billID, billTitle)
 	} else {
-		billTitle = billId
+		billTitle = billID
 	}
-	const TWEET_LEN = 280 // Max tweet length
-	const URL_LEN = 23    // Twitter cap for URL characters
-	baseChars := len(fmt.Sprintf(" See more at  #%s", b.BillID)) + URL_LEN
+	const tweetLen = 280 // Max tweet length
+	const urlLen = 23    // Twitter cap for URL characters
+	baseChars := len(fmt.Sprintf(" See more at  #%s", b.BillID)) + urlLen
 
 	var actionStr string
 	var actionText string
@@ -225,9 +234,9 @@ func (b *Bill) CreateTweet(billUrl string) string {
 	}
 
 	tweetContent := fmt.Sprintf("%s%s.", billTitle, actionText)
-	if len(tweetContent)+baseChars > TWEET_LEN {
+	if len(tweetContent)+baseChars > tweetLen {
 		// Get the difference to remove (add characters for ellipsis)
-		tweetDiff := (baseChars + len(tweetContent) + 3) - TWEET_LEN
+		tweetDiff := (baseChars + len(tweetContent) + 3) - tweetLen
 		var ellipsis string
 		// Only include 2 periods for ellipsis if no action text, since it ends with a period
 		if actionText == "" {
@@ -238,9 +247,10 @@ func (b *Bill) CreateTweet(billUrl string) string {
 		tweetContent = fmt.Sprintf("%s%s%s.", strings.TrimSpace(billTitle[0:len(billTitle)-tweetDiff]), ellipsis, actionText)
 	}
 
-	return fmt.Sprintf("%s See more at %s #%s", tweetContent, billUrl, b.BillID)
+	return fmt.Sprintf("%s See more at %s #%s", tweetContent, billURL, b.BillID)
 }
 
+// SetNextRun updates the time the bill should be queried next
 func (b *Bill) SetNextRun() {
 	// Set NextRun to a time in the future within a defined range
 	loc, _ := time.LoadLocation("America/Chicago")

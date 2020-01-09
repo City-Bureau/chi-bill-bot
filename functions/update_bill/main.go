@@ -12,35 +12,35 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-func UpdateBill(bill models.Bill, actions []models.LegistarAction, snsClient svc.SNSType) error {
+func updateBill(bill models.Bill, actions []models.LegistarAction, snsClient svc.SNSType) error {
 	billActions := bill.GetActions()
 
 	// If the bill is new or has changed tweet it out
 	if bill.NextRun == nil || len(actions) > len(billActions) {
-		actionJson, err := json.Marshal(actions)
+		actionJSON, err := json.Marshal(actions)
 		if err != nil {
 			return err
 		}
-		bill.Data = string(actionJson)
-		billUrl := bill.GetTweetURL()
-		data := svc.TweetData{Text: bill.CreateTweet(billUrl)}
-		tweetJson, err := json.Marshal(data)
+		bill.Data = string(actionJSON)
+		billURL := bill.GetTweetURL()
+		data := svc.TweetData{Text: bill.CreateTweet(billURL)}
+		tweetJSON, err := json.Marshal(data)
 		if err != nil {
 			return err
 		}
-		err = snsClient.Publish(string(tweetJson), os.Getenv("SNS_TOPIC_ARN"), "post_tweet")
+		err = snsClient.Publish(string(tweetJSON), os.Getenv("SNS_TOPIC_ARN"), "post_tweet")
 		if err != nil {
 			return err
 		}
 	}
 	bill.SetNextRun()
-	billJson, err := json.Marshal(bill)
+	billJSON, err := json.Marshal(bill)
 	if err != nil {
 		return err
 	}
 	// Return potential errors from saving last, because if the tweet failed then it will
 	// still be retried if there's a difference from what's in the database
-	return snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"), "save_bill")
+	return snsClient.Publish(string(billJSON), os.Getenv("SNS_TOPIC_ARN"), "save_bill")
 }
 
 func handler(request events.SNSEvent) error {
@@ -67,7 +67,7 @@ func handler(request events.SNSEvent) error {
 	bill.Title = title
 	bill.Classification = cls
 
-	err = UpdateBill(bill, actions, snsClient)
+	err = updateBill(bill, actions, snsClient)
 	// Only log this error since it just prevented
 	if err != nil {
 		snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"), "update_bill")

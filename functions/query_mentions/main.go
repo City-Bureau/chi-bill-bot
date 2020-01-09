@@ -14,7 +14,7 @@ import (
 	"github.com/dghubble/go-twitter/twitter"
 )
 
-func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
+func queryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 	tweets, err := twttr.GetMentions(&twitter.MentionTimelineParams{})
 	if err != nil {
 		return err
@@ -24,7 +24,7 @@ func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 		return nil
 	}
 	// Get the last tweet in the list of tweets, assign that to all
-	lastTweetId := tweets[len(tweets)-1].ID
+	lastTweetID := tweets[len(tweets)-1].ID
 
 	// Iterate through mentions, publishing each to SNS topic
 	for _, tweet := range tweets {
@@ -38,7 +38,7 @@ func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 			TweetID:     &tweet.ID,
 			TweetText:   tweet.Text,
 			TweetUser:   tweet.User.ScreenName,
-			LastTweetID: &lastTweetId,
+			LastTweetID: &lastTweetID,
 		}
 
 		// Load bill data from tweet
@@ -48,15 +48,15 @@ func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 		if tweetBill.BillID == "" {
 			continue
 		}
-		billUrl, _ := tweetBill.SearchBill()
-		tweetBill.URL = billUrl
+		billURL, _ := tweetBill.SearchBill()
+		tweetBill.URL = billURL
 		title, cls, actions, _ := tweetBill.FetchBillData()
 		tweetBill.Title = title
 		tweetBill.Classification = cls
-		actionJson, _ := json.Marshal(actions)
-		tweetBill.Data = string(actionJson)
-		tweetBillJson, _ := json.Marshal(tweetBill)
-		err = snsClient.Publish(string(tweetBillJson), os.Getenv("SNS_TOPIC_ARN"), "handle_tweet")
+		actionJSON, _ := json.Marshal(actions)
+		tweetBill.Data = string(actionJSON)
+		tweetBillJSON, _ := json.Marshal(tweetBill)
+		err = snsClient.Publish(string(tweetBillJSON), os.Getenv("SNS_TOPIC_ARN"), "handle_tweet")
 		if err != nil {
 			return err
 		}
@@ -65,7 +65,7 @@ func QueryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 }
 
 func handler(request events.CloudWatchEvent) error {
-	err := QueryMentions(svc.NewTwitterClient(), svc.NewSNSClient())
+	err := queryMentions(svc.NewTwitterClient(), svc.NewSNSClient())
 	if err != nil {
 		log.Fatal(err)
 	}

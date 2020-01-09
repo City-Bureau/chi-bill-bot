@@ -18,7 +18,7 @@ func TestUpdateBillIgnoresNoChanges(t *testing.T) {
 		Data:    `[]`,
 	}
 	snsMock.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	UpdateBill(bill, []models.LegistarAction{}, snsMock)
+	updateBill(bill, []models.LegistarAction{}, snsMock)
 	snsMock.AssertCalled(t, "Publish", mock.Anything, mock.Anything, "save_bill")
 }
 
@@ -29,7 +29,7 @@ func TestUpdateBillNilNextRunSendsTweet(t *testing.T) {
 		Data:   `[]`,
 	}
 	snsMock.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	UpdateBill(bill, []models.LegistarAction{}, snsMock)
+	updateBill(bill, []models.LegistarAction{}, snsMock)
 	snsMock.AssertExpectations(t)
 	snsMock.AssertNumberOfCalls(t, "Publish", 2)
 }
@@ -47,7 +47,7 @@ func TestUpdateBillNewActionsSendsTweet(t *testing.T) {
 		models.LegistarAction{Date: actionDate, Action: "introduction", Actor: "Test"},
 	}
 	snsMock.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	UpdateBill(bill, actions, snsMock)
+	updateBill(bill, actions, snsMock)
 	snsMock.AssertExpectations(t)
 	snsMock.AssertNumberOfCalls(t, "Publish", 2)
 }

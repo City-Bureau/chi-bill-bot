@@ -23,7 +23,7 @@ func TestQueryMentionsIgnoresEmptyBillID(t *testing.T) {
 	snsMock := new(mocks.SNSClientMock)
 	twttrMock.On("GetMentions", mock.Anything).Return(tweets, nil)
 	snsMock.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	QueryMentions(twttrMock, snsMock)
+	queryMentions(twttrMock, snsMock)
 	snsMock.AssertNotCalled(t, "Publish", mock.Anything, mock.Anything, "handle_tweet")
 }
 
@@ -40,7 +40,7 @@ func TestQueryMentionsIgnoresOldTweet(t *testing.T) {
 	snsMock := new(mocks.SNSClientMock)
 	twttrMock.On("GetMentions", mock.Anything).Return(tweets, nil)
 	snsMock.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	QueryMentions(twttrMock, snsMock)
+	queryMentions(twttrMock, snsMock)
 	snsMock.AssertNotCalled(t, "Publish", mock.Anything, mock.Anything, "handle_tweet")
 }
 
@@ -58,6 +58,6 @@ func TestQueryMentionsTweetsBill(t *testing.T) {
 	snsMock := new(mocks.SNSClientMock)
 	twttrMock.On("GetMentions", mock.Anything).Return(tweets, nil)
 	snsMock.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	QueryMentions(twttrMock, snsMock)
+	queryMentions(twttrMock, snsMock)
 	snsMock.AssertCalled(t, "Publish", mock.Anything, mock.Anything, "handle_tweet")
 }

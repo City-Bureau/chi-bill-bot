@@ -9,8 +9,8 @@ import (
 
 func TestUnmarshalBill(t *testing.T) {
 	var bill Bill
-	billJson := `{"tweet_id": 10, "tweet_text": "R2019-55", "last_tweet_id": 1}`
-	err := json.Unmarshal([]byte(billJson), &bill)
+	billJSON := `{"tweet_id": 10, "tweet_text": "R2019-55", "last_tweet_id": 1}`
+	err := json.Unmarshal([]byte(billJSON), &bill)
 	if err != nil || *bill.TweetID != 10 || *bill.LastTweetID != 1 {
 		t.Errorf("Should correctly unmarshal")
 	}
@@ -39,16 +39,16 @@ func TestParseBillID(t *testing.T) {
 }
 
 func TestGetCleanBillID(t *testing.T) {
-	var apiBillId string
+	var apiBillID string
 	bill := Bill{BillID: "O20151111"}
-	apiBillId = bill.GetCleanBillID()
-	if apiBillId != "O2015-1111" {
-		t.Errorf("GetCleanBillID should return 'O2015-1111', got %s", apiBillId)
+	apiBillID = bill.GetCleanBillID()
+	if apiBillID != "O2015-1111" {
+		t.Errorf("GetCleanBillID should return 'O2015-1111', got %s", apiBillID)
 	}
 	bill.BillID = "FL20101"
-	apiBillId = bill.GetCleanBillID()
-	if apiBillId != "FL2010-1" {
-		t.Errorf("GetCleanBillID should return 'FL2010-1', got %s", apiBillId)
+	apiBillID = bill.GetCleanBillID()
+	if apiBillID != "FL2010-1" {
+		t.Errorf("GetCleanBillID should return 'FL2010-1', got %s", apiBillID)
 	}
 }
 
@@ -73,10 +73,10 @@ func TestCreateTweet(t *testing.T) {
 		BillID:         "O201011",
 		Data:           `[]`,
 	}
-	councilmaticUrl := "https://chicago.councilmatic.com/legislation/o2010-11/"
-	tweetEnd := fmt.Sprintf("See more at %s #O201011", councilmaticUrl)
-	if bill.CreateTweet(councilmaticUrl) != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
-		t.Errorf("Tweet with alternate URL is incorrect: %s", bill.CreateTweet(councilmaticUrl))
+	councilmaticURL := "https://chicago.councilmatic.com/legislation/o2010-11/"
+	tweetEnd := fmt.Sprintf("See more at %s #O201011", councilmaticURL)
+	if bill.CreateTweet(councilmaticURL) != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {
+		t.Errorf("Tweet with alternate URL is incorrect: %s", bill.CreateTweet(councilmaticURL))
 	}
 	tweetEnd = "See more at https://chicago.legistar.com #O201011"
 	if bill.CreateTweet(bill.URL) != fmt.Sprintf("O2010-11: Testing bill. %s", tweetEnd) {

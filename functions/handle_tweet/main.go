@@ -15,8 +15,8 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
-func SaveBillAndTweet(text string, bill *models.Bill, snsClient svc.SNSType) error {
-	billJson, err := json.Marshal(bill)
+func saveBillAndTweet(text string, bill *models.Bill, snsClient svc.SNSType) error {
+	billJSON, err := json.Marshal(bill)
 	if err != nil {
 		return err
 	}
@@ -24,18 +24,18 @@ func SaveBillAndTweet(text string, bill *models.Bill, snsClient svc.SNSType) err
 		Text:   fmt.Sprintf("@%s %s", bill.TweetUser, text),
 		Params: twitter.StatusUpdateParams{InReplyToStatusID: *bill.TweetID},
 	}
-	tweetJson, err := json.Marshal(data)
+	tweetJSON, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-	err = snsClient.Publish(string(tweetJson), os.Getenv("SNS_TOPIC_ARN"), "post_tweet")
+	err = snsClient.Publish(string(tweetJSON), os.Getenv("SNS_TOPIC_ARN"), "post_tweet")
 	if err != nil {
 		return err
 	}
-	return snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"), "update_bill")
+	return snsClient.Publish(string(billJSON), os.Getenv("SNS_TOPIC_ARN"), "update_bill")
 }
 
-func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
+func handleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 	var billForTweet models.Bill
 
 	if !db.Where(&models.Bill{TweetID: bill.TweetID}).Take(&billForTweet).RecordNotFound() {
@@ -46,8 +46,8 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 	if bill.BillID == "" {
 		bill.Active = false
 		// Don't post a tweet for unmatched bill, otherwise will go for all tweets with mentions
-		billJson, _ := json.Marshal(bill)
-		return snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"), "save_bill")
+		billJSON, _ := json.Marshal(bill)
+		return snsClient.Publish(string(billJSON), os.Getenv("SNS_TOPIC_ARN"), "save_bill")
 	}
 
 	var existingBill models.Bill
@@ -59,14 +59,14 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 		if bill.URL == "" {
 			// Tweet that a valid bill wasn't found
 			bill.Active = false
-			return SaveBillAndTweet(
+			return saveBillAndTweet(
 				"We couldn't find a Chicago City Council bill with that ID",
 				bill,
 				snsClient,
 			)
 		}
 		// Tweet that the new bill is now being tracked, save
-		return SaveBillAndTweet(
+		return saveBillAndTweet(
 			fmt.Sprintf(
 				"We're now tracking Chicago City Council %s%s. You can follow along with #%s—we'll tweet when this legislation moves. %s",
 				billCls,
@@ -77,25 +77,25 @@ func HandleTweet(bill *models.Bill, db *gorm.DB, snsClient svc.SNSType) error {
 			bill,
 			snsClient,
 		)
-	} else {
-		// Tweet standard reply about already being able to follow it with hashtag
-		existingBill.LastTweetID = bill.LastTweetID
-		billCls := bill.Classification
-		if billCls != "" {
-			billCls = fmt.Sprintf("%s ", billCls)
-		}
-		return SaveBillAndTweet(
-			fmt.Sprintf(
-				"We're already tracking %s%s. You can follow along with #%s—we'll tweet when this legislation moves. %s",
-				billCls,
-				bill.GetCleanBillID(),
-				existingBill.BillID,
-				bill.URL,
-			),
-			&existingBill,
-			snsClient,
-		)
 	}
+
+	// Tweet standard reply about already being able to follow it with hashtag
+	existingBill.LastTweetID = bill.LastTweetID
+	billCls := bill.Classification
+	if billCls != "" {
+		billCls = fmt.Sprintf("%s ", billCls)
+	}
+	return saveBillAndTweet(
+		fmt.Sprintf(
+			"We're already tracking %s%s. You can follow along with #%s—we'll tweet when this legislation moves. %s",
+			billCls,
+			bill.GetCleanBillID(),
+			existingBill.BillID,
+			bill.URL,
+		),
+		&existingBill,
+		snsClient,
+	)
 }
 
 func handler(request events.SNSEvent) error {
@@ -124,7 +124,7 @@ func handler(request events.SNSEvent) error {
 		log.Fatal(err)
 		return err
 	}
-	err = HandleTweet(&bill, db, snsClient)
+	err = handleTweet(&bill, db, snsClient)
 	if err != nil {
 		log.Fatal(err)
 		return err

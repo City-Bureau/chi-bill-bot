@@ -17,16 +17,16 @@ func TestHandleTweetExits(t *testing.T) {
 
 	snsMock := new(mocks.SNSClientMock)
 	var bill models.Bill
-	var tweetId int64 = 1234
+	var tweetID int64 = 1234
 	bill = models.Bill{
 		BillID:    "O20101",
-		TweetID:   &tweetId,
+		TweetID:   &tweetID,
 		TweetText: "O20101",
 	}
 	dbMock.ExpectQuery("SELECT (.+) FROM (.+) WHERE (.+) LIMIT 1").
 		WithArgs(bill.TweetID).
 		WillReturnRows(sqlmock.NewRows([]string{"pk", "tweet_id"}).AddRow(1, 1234))
-	HandleTweet(&bill, DB, snsMock)
+	handleTweet(&bill, DB, snsMock)
 	if err := dbMock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
@@ -39,16 +39,16 @@ func TestHandleTweetEmptyBillID(t *testing.T) {
 
 	snsMock := new(mocks.SNSClientMock)
 	var bill models.Bill
-	var tweetId int64 = 1
+	var tweetID int64 = 1
 	bill = models.Bill{
-		TweetID:   &tweetId,
+		TweetID:   &tweetID,
 		TweetText: "",
 	}
 	dbMock.ExpectQuery("SELECT (.+) FROM (.+) WHERE (.+) LIMIT 1").
 		WithArgs(bill.TweetID).
 		WillReturnError(gorm.ErrRecordNotFound)
 	snsMock.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	HandleTweet(&bill, DB, snsMock)
+	handleTweet(&bill, DB, snsMock)
 	if err := dbMock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}

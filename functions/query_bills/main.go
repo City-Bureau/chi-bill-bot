@@ -41,11 +41,11 @@ func handler(request events.CloudWatchEvent) error {
 	for _, bill := range bills {
 		log.Println(bill.BillID)
 		// Log errors but don't exit since we can just ignore them here
-		billJson, err := json.Marshal(bill)
+		billJSON, err := json.Marshal(bill)
 		if err != nil {
 			log.Println(err)
 		}
-		err = snsClient.Publish(string(billJson), os.Getenv("SNS_TOPIC_ARN"), "update_bill")
+		err = snsClient.Publish(string(billJSON), os.Getenv("SNS_TOPIC_ARN"), "update_bill")
 		if err != nil {
 			log.Println(err)
 		}

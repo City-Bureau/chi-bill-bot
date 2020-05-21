@@ -3,16 +3,17 @@ service: chi-bill-bot
 provider:
   name: aws
   runtime: go1.x
-  stage: prod
+  stage: ${opt:stage, 'dev'}
+  region: us-east-2
   environment:
-    TWITTER_CONSUMER_KEY: ${env:TWITTER_CONSUMER_KEY}
-    TWITTER_CONSUMER_SECRET: ${env:TWITTER_CONSUMER_SECRET}
-    TWITTER_ACCESS_TOKEN: ${env:TWITTER_ACCESS_TOKEN}
-    TWITTER_ACCESS_SECRET: ${env:TWITTER_ACCESS_SECRET}
-    RDS_DB_NAME: ${env:RDS_DB_NAME}
-    RDS_USERNAME: ${env:RDS_USERNAME}
-    RDS_PASSWORD: ${env:RDS_PASSWORD}
-    SNS_EMAIL: ${env:SNS_EMAIL}
+    TWITTER_CONSUMER_KEY: ${ssm:/${self:provider.stage}/${self:service}/twitter/consumer-key}
+    TWITTER_CONSUMER_SECRET: ${ssm:/${self:provider.stage}/${self:service}/twitter/consumer-secret}
+    TWITTER_ACCESS_TOKEN: ${ssm:/${self:provider.stage}/${self:service}/twitter/access-token}
+    TWITTER_ACCESS_SECRET: ${ssm:/${self:provider.stage}/${self:service}/twitter/access-secret}
+    RDS_DB_NAME: ${ssm:/${self:provider.stage}/${self:service}/db/name}
+    RDS_USERNAME: ${ssm:/${self:provider.stage}/${self:service}/db/user}
+    RDS_PASSWORD: ${ssm:/${self:provider.stage}/${self:service}/db/password}
+    SNS_EMAIL: ${ssm:/${self:provider.stage}/${self:service}/sns/email}
   tags:
     project: chi-bill-bot
   iamRoleStatements:
@@ -35,14 +36,17 @@ plugins:
 custom:
   topicName: ${self:service}-${self:provider.stage}-events
   AURORA:
-    DB_NAME: ${env:RDS_DB_NAME}
-    USERNAME: ${env:RDS_USERNAME}
-    PASSWORD: ${env:RDS_PASSWORD}
-    HOST:
-      Fn::GetAtt: [AuroraRDSCluster, Endpoint.Address]
-    PORT:
-      Fn::GetAtt: [AuroraRDSCluster, Endpoint.Port]
-    VPC_CIDR: '10'
+    DB_NAME: ${ssm:/${self:provider.stage}/${self:service}/db/name}
+    USERNAME: ${ssm:/${self:provider.stage}/${self:service}/db/user}
+    PASSWORD: ${ssm:/${self:provider.stage}/${self:service}/db/password}
+    HOST: ${ssm:/${self:provider.stage}/${self:service}/db/host}
+    PORT: ${ssm:/${self:provider.stage}/${self:service}/db/port}
+  vpc:
+    securityGroupIds:
+      - ${ssm:/${self:provider.stage}/${self:service}/vpc/security-group/id}
+    subnetIds:
+      - ${ssm:/${self:provider.stage}/${self:service}/vpc/subnet/a}
+      - ${ssm:/${self:provider.stage}/${self:service}/vpc/subnet/b}
   alerts:
     stages:
       - prod
@@ -53,7 +57,7 @@ custom:
         topic: ${self:service}-${self:provider.stage}-alerts-alarm
         notifications:
           - protocol: email
-            endpoint: ${env:SNS_EMAIL}
+            endpoint: ${ssm:/${self:provider.stage}/${self:service}/sns/email}
 
 functions:
   migrate:
@@ -63,13 +67,7 @@ functions:
       RDS_HOST: ${self:custom.AURORA.HOST}
     alarms:
       - functionErrors
-    vpc:
-      securityGroupIds:
-        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
-      subnetIds:
-        - Ref: ServerlessSubnetA
-        - Ref: ServerlessSubnetB
-        - Ref: ServerlessSubnetC
+    vpc: ${self:custom.vpc}
   query_mentions:
     handler: bin/query_mentions
     timeout: 120
@@ -89,13 +87,7 @@ functions:
       RDS_HOST: ${self:custom.AURORA.HOST}
     alarms:
       - functionErrors
-    vpc:
-      securityGroupIds:
-        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
-      subnetIds:
-        - Ref: ServerlessSubnetA
-        - Ref: ServerlessSubnetB
-        - Ref: ServerlessSubnetC
+    vpc: ${self:custom.vpc}
     events:
       - sns:
           arn:
@@ -129,13 +121,7 @@ functions:
       RDS_HOST: ${self:custom.AURORA.HOST}
     alarms:
       - functionErrors
-    vpc:
-      securityGroupIds:
-        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
-      subnetIds:
-        - Ref: ServerlessSubnetA
-        - Ref: ServerlessSubnetB
-        - Ref: ServerlessSubnetC
+    vpc: ${self:custom.vpc}
     events:
       - sns:
           arn:
@@ -153,13 +139,7 @@ functions:
       RDS_HOST: ${self:custom.AURORA.HOST}
     alarms:
       - functionErrors
-    vpc:
-      securityGroupIds:
-        - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
-      subnetIds:
-        - Ref: ServerlessSubnetA
-        - Ref: ServerlessSubnetB
-        - Ref: ServerlessSubnetC
+    vpc: ${self:custom.vpc}
     events:
       - schedule: cron(3 2,14,17,20,23 * * ? *)
   update_bill:
@@ -186,100 +166,6 @@ resources:
       Properties:
         TopicName: ${self:service}-${self:provider.stage}-events
         DisplayName: ChiBillBotEvents
-        Tags:
-          - Key: project
-            Value: ${self:service}-${self:provider.stage}
-    SNSVPCEndpoint:
-      Type: AWS::EC2::VPCEndpoint
-      DependsOn: SNSTopic
-      Properties:
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Principal: '*'
-              Action:
-                - 'sns:*'
-              Resource: '*'
-        ServiceName: 'com.amazonaws.${self:provider.region}.sns'
-        PrivateDnsEnabled: true
-        VpcEndpointType: Interface
-        SecurityGroupIds:
-          - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
-        SubnetIds:
-          - Ref: ServerlessSubnetA
-          - Ref: ServerlessSubnetB
-          - Ref: ServerlessSubnetC
-        VpcId:
-          Ref: ServerlessVPC
-    ServerlessVPC:
-      Type: AWS::EC2::VPC
-      Properties:
-        CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.0.0/16'
-        EnableDnsSupport: true
-        EnableDnsHostnames: true
-        InstanceTenancy: default
-        Tags:
-          - Key: project
-            Value: ${self:service}-${self:provider.stage}
-    ServerlessSubnetA:
-      DependsOn: ServerlessVPC
-      Type: AWS::EC2::Subnet
-      Properties:
-        VpcId:
-          Ref: ServerlessVPC
-        AvailabilityZone: ${self:provider.region}a
-        CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.0.0/24'
-        Tags:
-          - Key: project
-            Value: ${self:service}-${self:provider.stage}
-    ServerlessSubnetB:
-      DependsOn: ServerlessVPC
-      Type: AWS::EC2::Subnet
-      Properties:
-        VpcId:
-          Ref: ServerlessVPC
-        AvailabilityZone: ${self:provider.region}b
-        CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.1.0/24'
-        Tags:
-          - Key: project
-            Value: ${self:service}-${self:provider.stage}
-    ServerlessSubnetC:
-      DependsOn: ServerlessVPC
-      Type: AWS::EC2::Subnet
-      Properties:
-        VpcId:
-          Ref: ServerlessVPC
-        AvailabilityZone: ${self:provider.region}c
-        CidrBlock: '${self:custom.AURORA.VPC_CIDR}.0.2.0/24'
-        Tags:
-          - Key: project
-            Value: ${self:service}-${self:provider.stage}
-    AuroraSubnetGroup:
-      Type: AWS::RDS::DBSubnetGroup
-      Properties:
-        DBSubnetGroupDescription: "Aurora Subnet Group"
-        SubnetIds:
-          - Ref: ServerlessSubnetA
-          - Ref: ServerlessSubnetB
-          - Ref: ServerlessSubnetC
-        Tags:
-          - Key: project
-            Value: ${self:service}-${self:provider.stage}
-    AuroraRDSCluster:
-      Type: "AWS::RDS::DBCluster"
-      Properties:
-        MasterUsername: ${self:custom.AURORA.USERNAME}
-        MasterUserPassword: ${self:custom.AURORA.PASSWORD}
-        DBSubnetGroupName:
-          Ref: AuroraSubnetGroup
-        Engine: aurora
-        EngineMode: serverless
-        EngineVersion: "5.6"
-        DatabaseName: ${self:custom.AURORA.DB_NAME}
-        BackupRetentionPeriod: 3
-        VpcSecurityGroupIds:
-          - Fn::GetAtt: ServerlessVPC.DefaultSecurityGroup
         Tags:
           - Key: project
             Value: ${self:service}-${self:provider.stage}

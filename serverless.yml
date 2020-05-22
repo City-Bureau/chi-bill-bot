@@ -6,14 +6,14 @@ provider:
   stage: ${opt:stage, 'dev'}
   region: us-east-2
   environment:
-    TWITTER_CONSUMER_KEY: ${ssm:/${self:provider.stage}/${self:service}/twitter/consumer-key}
-    TWITTER_CONSUMER_SECRET: ${ssm:/${self:provider.stage}/${self:service}/twitter/consumer-secret}
-    TWITTER_ACCESS_TOKEN: ${ssm:/${self:provider.stage}/${self:service}/twitter/access-token}
-    TWITTER_ACCESS_SECRET: ${ssm:/${self:provider.stage}/${self:service}/twitter/access-secret}
-    RDS_DB_NAME: ${ssm:/${self:provider.stage}/${self:service}/db/name}
-    RDS_USERNAME: ${ssm:/${self:provider.stage}/${self:service}/db/user}
-    RDS_PASSWORD: ${ssm:/${self:provider.stage}/${self:service}/db/password}
-    SNS_EMAIL: ${ssm:/${self:provider.stage}/${self:service}/sns/email}
+    TWITTER_CONSUMER_KEY: ${ssm:/${self:provider.stage}/${self:service}/twitter/consumer-key~true}
+    TWITTER_CONSUMER_SECRET: ${ssm:/${self:provider.stage}/${self:service}/twitter/consumer-secret~true}
+    TWITTER_ACCESS_TOKEN: ${ssm:/${self:provider.stage}/${self:service}/twitter/access-token~true}
+    TWITTER_ACCESS_SECRET: ${ssm:/${self:provider.stage}/${self:service}/twitter/access-secret~true}
+    RDS_DB_NAME: ${ssm:/${self:provider.stage}/${self:service}/db/name~true}
+    RDS_USERNAME: ${ssm:/${self:provider.stage}/${self:service}/db/user~true}
+    RDS_PASSWORD: ${ssm:/${self:provider.stage}/${self:service}/db/password~true}
+    SNS_EMAIL: ${ssm:/${self:provider.stage}/${self:service}/sns/email~true}
   tags:
     project: chi-bill-bot
   iamRoleStatements:
@@ -36,17 +36,17 @@ plugins:
 custom:
   topicName: ${self:service}-${self:provider.stage}-events
   AURORA:
-    DB_NAME: ${ssm:/${self:provider.stage}/${self:service}/db/name}
-    USERNAME: ${ssm:/${self:provider.stage}/${self:service}/db/user}
-    PASSWORD: ${ssm:/${self:provider.stage}/${self:service}/db/password}
-    HOST: ${ssm:/${self:provider.stage}/${self:service}/db/host}
-    PORT: ${ssm:/${self:provider.stage}/${self:service}/db/port}
+    DB_NAME: ${ssm:/${self:provider.stage}/${self:service}/db/name~true}
+    USERNAME: ${ssm:/${self:provider.stage}/${self:service}/db/user~true}
+    PASSWORD: ${ssm:/${self:provider.stage}/${self:service}/db/password~true}
+    HOST: ${ssm:/${self:provider.stage}/${self:service}/db/host~true}
+    PORT: ${ssm:/${self:provider.stage}/${self:service}/db/port~true}
   vpc:
     securityGroupIds:
-      - ${ssm:/${self:provider.stage}/${self:service}/vpc/security-group/id}
+      - ${ssm:/${self:provider.stage}/${self:service}/vpc/security-group/id~true}
     subnetIds:
-      - ${ssm:/${self:provider.stage}/${self:service}/vpc/subnet/a}
-      - ${ssm:/${self:provider.stage}/${self:service}/vpc/subnet/b}
+      - ${ssm:/${self:provider.stage}/${self:service}/vpc/subnet/a~true}
+      - ${ssm:/${self:provider.stage}/${self:service}/vpc/subnet/b~true}
   alerts:
     stages:
       - prod
@@ -57,7 +57,7 @@ custom:
         topic: ${self:service}-${self:provider.stage}-alerts-alarm
         notifications:
           - protocol: email
-            endpoint: ${ssm:/${self:provider.stage}/${self:service}/sns/email}
+            endpoint: ${ssm:/${self:provider.stage}/${self:service}/sns/email~true}
 
 functions:
   migrate:

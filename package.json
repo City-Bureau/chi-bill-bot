@@ -6,5 +6,7 @@
     "serverless-dotenv-plugin": "^2.1.1",
     "serverless-plugin-aws-alerts": "^1.2.4"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "serverless-prune-plugin": "^1.4.3"
+  }
 }

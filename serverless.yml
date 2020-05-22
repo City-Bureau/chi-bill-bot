@@ -16,6 +16,7 @@ provider:
     SNS_EMAIL: ${ssm:/${self:provider.stage}/${self:service}/sns/email~true}
   tags:
     project: chi-bill-bot
+    environment: ${self:provider.stage}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -172,4 +173,6 @@ resources:
         DisplayName: ChiBillBotEvents
         Tags:
           - Key: project
-            Value: ${self:service}-${self:provider.stage}
+            Value: ${self:service}
+          - Key: environment
+            Value: ${self:provider.stage}

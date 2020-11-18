@@ -20,7 +20,7 @@ build:
 	done
 
 deploy:
-	serverless deploy --stage prod
+	npx serverless deploy --stage prod
 
 clean:
 	rm -rf bin

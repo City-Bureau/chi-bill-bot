@@ -41,7 +41,7 @@ func NewTwitterClient() *TwitterClient {
 
 // PostTweet posts a tweet to Twitter
 func (t *TwitterClient) PostTweet(tweet string, params *twitter.StatusUpdateParams) error {
-	log.Printf(tweet)
+	log.Println(tweet)
 	_, _, err := t.Client.Statuses.Update(tweet, params)
 	return err
 }

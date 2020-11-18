@@ -31,10 +31,11 @@ jobs:
 
       - run: make format
 
-      - uses: grandcolline/golang-github-actions@v1.1.0
+      - uses: actions-contrib/golangci-lint@v1
+        env:
+          GOROOT: ""
         with:
-          run: lint
-          token: ${{ secrets.GITHUB_TOKEN }}
+          args: "run"
 
       - run: make build
 

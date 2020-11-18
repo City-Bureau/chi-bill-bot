@@ -26,7 +26,7 @@ func TestHandleTweetExits(t *testing.T) {
 	dbMock.ExpectQuery("SELECT (.+) FROM (.+) WHERE (.+) LIMIT 1").
 		WithArgs(bill.TweetID).
 		WillReturnRows(sqlmock.NewRows([]string{"pk", "tweet_id"}).AddRow(1, 1234))
-	handleTweet(&bill, DB, snsMock)
+	_ = handleTweet(&bill, DB, snsMock)
 	if err := dbMock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
@@ -48,7 +48,7 @@ func TestHandleTweetEmptyBillID(t *testing.T) {
 		WithArgs(bill.TweetID).
 		WillReturnError(gorm.ErrRecordNotFound)
 	snsMock.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	handleTweet(&bill, DB, snsMock)
+	_ = handleTweet(&bill, DB, snsMock)
 	if err := dbMock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}

@@ -54,7 +54,7 @@ func handler(request events.SNSEvent) error {
 	err := json.Unmarshal([]byte(message), &bill)
 	// Log errors because we don't want to trigger Lambda's retries
 	if err != nil {
-		snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"), "update_bill")
+		_ = snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"), "update_bill")
 		log.Println(err)
 		return nil
 	}
@@ -70,7 +70,7 @@ func handler(request events.SNSEvent) error {
 	err = updateBill(bill, actions, snsClient)
 	// Only log this error since it just prevented
 	if err != nil {
-		snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"), "update_bill")
+		_ = snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"), "update_bill")
 		log.Println(err)
 	}
 	return nil

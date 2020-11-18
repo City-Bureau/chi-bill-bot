@@ -11,7 +11,9 @@ require (
 	github.com/dghubble/go-twitter v0.0.0-20190512073027-53f972dc4b06
 	github.com/dghubble/oauth1 v0.5.0
 	github.com/dghubble/sling v1.2.0 // indirect
+	github.com/fnproject/fdk-go v0.0.3
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/jinzhu/gorm v1.9.8
 	github.com/stretchr/testify v1.2.2
+	github.com/tencentyun/scf-go-lib v0.0.0-20200624065115-ba679e2ec9c9
 )

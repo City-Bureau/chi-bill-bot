@@ -18,7 +18,8 @@ type SNSClient struct {
 
 // NewSNSClient creates an SNSClient object
 func NewSNSClient() *SNSClient {
-	client := sns.New(session.New())
+	sess, _ := session.NewSession()
+	client := sns.New(sess)
 	return &SNSClient{Client: client}
 }
 
@@ -28,7 +29,7 @@ func (c *SNSClient) Publish(message string, topicArn string, feed string) error 
 		Message:  aws.String(message),
 		TopicArn: aws.String(topicArn),
 		MessageAttributes: map[string]*sns.MessageAttributeValue{
-			"feed": &sns.MessageAttributeValue{
+			"feed": {
 				DataType:    aws.String("String"),
 				StringValue: aws.String(feed),
 			},

@@ -2,11 +2,9 @@
   "name": "chi-bill-bot",
   "version": "0.0.1",
   "description": "Twitter bot for following Chicago City Council legislation",
-  "dependencies": {
-    "serverless-dotenv-plugin": "^2.1.1",
-    "serverless-plugin-aws-alerts": "^1.2.4"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "serverless-plugin-aws-alerts": "^1.6.1",
     "serverless-prune-plugin": "^1.4.3"
   }
 }

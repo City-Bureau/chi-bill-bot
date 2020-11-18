@@ -31,7 +31,6 @@ package:
     - ./bin/**
 
 plugins:
-  - serverless-dotenv-plugin
   - serverless-plugin-aws-alerts
   - serverless-prune-plugin
 

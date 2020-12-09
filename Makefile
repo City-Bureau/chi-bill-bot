@@ -6,7 +6,7 @@ install:
 	npm install
 
 test:
-	go test ./...
+	go test ./pkg/... ./functions/...
 
 format:
 	test -z $$(gofmt -l .)

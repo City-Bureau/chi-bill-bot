@@ -9,6 +9,7 @@ import (
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
+	"github.com/getsentry/sentry-go"
 	"github.com/jinzhu/gorm"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -25,6 +26,7 @@ func handler(request events.CloudWatchEvent) error {
 		os.Getenv("RDS_DB_NAME"),
 	))
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Fatal(err)
 		return err
 	}
@@ -47,6 +49,7 @@ func handler(request events.CloudWatchEvent) error {
 		}
 		err = snsClient.Publish(string(billJSON), os.Getenv("SNS_TOPIC_ARN"), "update_bill")
 		if err != nil {
+			sentry.CaptureException(err)
 			log.Println(err)
 		}
 	}
@@ -54,5 +57,12 @@ func handler(request events.CloudWatchEvent) error {
 }
 
 func main() {
+	_ = sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("SENTRY_DSN"),
+		Transport: &sentry.HTTPSyncTransport{
+			Timeout: 5 * time.Second,
+		},
+	})
+
 	lambda.Start(handler)
 }

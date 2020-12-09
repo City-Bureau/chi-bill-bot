@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
+	"github.com/getsentry/sentry-go"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -35,6 +37,7 @@ func handler(request events.SNSEvent) error {
 	var bill models.Bill
 	err = json.Unmarshal([]byte(message), &bill)
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Fatal(err)
 		return err
 	}
@@ -44,5 +47,12 @@ func handler(request events.SNSEvent) error {
 }
 
 func main() {
+	_ = sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("SENTRY_DSN"),
+		Transport: &sentry.HTTPSyncTransport{
+			Timeout: 5 * time.Second,
+		},
+	})
+
 	lambda.Start(handler)
 }

@@ -13,7 +13,7 @@ provider:
     RDS_DB_NAME: ${ssm:/${self:provider.stage}/${self:service}/db/name~true}
     RDS_USERNAME: ${ssm:/${self:provider.stage}/${self:service}/db/user~true}
     RDS_PASSWORD: ${ssm:/${self:provider.stage}/${self:service}/db/password~true}
-    SNS_EMAIL: ${ssm:/${self:provider.stage}/${self:service}/sns/email~true}
+    SENTRY_DSN: ${ssm:/${self:provider.stage}/${self:service}/sentry/dsn~true}
   tags:
     project: chi-bill-bot
     environment: ${self:provider.stage}
@@ -31,7 +31,6 @@ package:
     - ./bin/**
 
 plugins:
-  - serverless-plugin-aws-alerts
   - serverless-prune-plugin
 
 custom:
@@ -48,17 +47,6 @@ custom:
     subnetIds:
       - ${ssm:/${self:provider.stage}/${self:service}/vpc/subnet/a~true}
       - ${ssm:/${self:provider.stage}/${self:service}/vpc/subnet/b~true}
-  alerts:
-    stages:
-      - prod
-    alarms:
-      - functionErrors
-    topics:
-      alarm:
-        topic: ${self:service}-${self:provider.stage}-alerts-alarm
-        notifications:
-          - protocol: email
-            endpoint: ${ssm:/${self:provider.stage}/${self:service}/sns/email~true}
   prune:
     automatic: true
     number: 3
@@ -69,8 +57,6 @@ functions:
     timeout: 120
     environment:
       RDS_HOST: ${self:custom.AURORA.HOST}
-    alarms:
-      - functionErrors
     vpc: ${self:custom.vpc}
   query_mentions:
     handler: bin/query_mentions
@@ -78,8 +64,6 @@ functions:
     environment:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
-    alarms:
-      - functionErrors
     events:
       - schedule: rate(10 minutes)
   handle_tweet:
@@ -89,8 +73,6 @@ functions:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
-    alarms:
-      - functionErrors
     vpc: ${self:custom.vpc}
     events:
       - sns:
@@ -106,8 +88,6 @@ functions:
     environment:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
-    alarms:
-      - functionErrors
     events:
       - sns:
           arn:
@@ -123,8 +103,6 @@ functions:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
-    alarms:
-      - functionErrors
     vpc: ${self:custom.vpc}
     events:
       - sns:
@@ -141,8 +119,6 @@ functions:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
       RDS_HOST: ${self:custom.AURORA.HOST}
-    alarms:
-      - functionErrors
     vpc: ${self:custom.vpc}
     events:
       - schedule: cron(3 2,14,17,20,23 * * ? *)
@@ -152,8 +128,6 @@ functions:
     environment:
       SNS_TOPIC_ARN:
         Ref: SNSTopic
-    alarms:
-      - functionErrors
     events:
       - sns:
           arn:

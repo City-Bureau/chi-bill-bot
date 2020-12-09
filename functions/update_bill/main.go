@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"time"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
+	"github.com/getsentry/sentry-go"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -55,6 +57,7 @@ func handler(request events.SNSEvent) error {
 	// Log errors because we don't want to trigger Lambda's retries
 	if err != nil {
 		_ = snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"), "update_bill")
+		sentry.CaptureException(err)
 		log.Println(err)
 		return nil
 	}
@@ -62,6 +65,7 @@ func handler(request events.SNSEvent) error {
 	// Get new data for bill, check if it's changed
 	title, cls, actions, err := bill.FetchBillData()
 	if err != nil {
+		sentry.CaptureException(err)
 		return err
 	}
 	bill.Title = title
@@ -71,11 +75,19 @@ func handler(request events.SNSEvent) error {
 	// Only log this error since it just prevented
 	if err != nil {
 		_ = snsClient.Publish(message, os.Getenv("SNS_TOPIC_ARN"), "update_bill")
+		sentry.CaptureException(err)
 		log.Println(err)
 	}
 	return nil
 }
 
 func main() {
+	_ = sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("SENTRY_DSN"),
+		Transport: &sentry.HTTPSyncTransport{
+			Timeout: 5 * time.Second,
+		},
+	})
+
 	lambda.Start(handler)
 }

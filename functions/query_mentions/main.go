@@ -8,6 +8,7 @@ import (
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/models"
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
+	"github.com/getsentry/sentry-go"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -67,11 +68,19 @@ func queryMentions(twttr svc.Twitter, snsClient svc.SNSType) error {
 func handler(request events.CloudWatchEvent) error {
 	err := queryMentions(svc.NewTwitterClient(), svc.NewSNSClient())
 	if err != nil {
+		sentry.CaptureException(err)
 		log.Fatal(err)
 	}
 	return err
 }
 
 func main() {
+	_ = sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("SENTRY_DSN"),
+		Transport: &sentry.HTTPSyncTransport{
+			Timeout: 5 * time.Second,
+		},
+	})
+
 	lambda.Start(handler)
 }

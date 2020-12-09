@@ -3,11 +3,14 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/City-Bureau/chi-bill-bot/pkg/svc"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/getsentry/sentry-go"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
@@ -21,6 +24,7 @@ func handler(request events.SNSEvent) error {
 	var data svc.TweetData
 	err := json.Unmarshal([]byte(message), &data)
 	if err != nil {
+		sentry.CaptureException(err)
 		return err
 	}
 
@@ -36,5 +40,12 @@ func handler(request events.SNSEvent) error {
 }
 
 func main() {
+	_ = sentry.Init(sentry.ClientOptions{
+		Dsn: os.Getenv("SENTRY_DSN"),
+		Transport: &sentry.HTTPSyncTransport{
+			Timeout: 5 * time.Second,
+		},
+	})
+
 	lambda.Start(handler)
 }

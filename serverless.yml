@@ -14,8 +14,11 @@ provider:
     RDS_USERNAME: ${ssm:/${self:provider.stage}/${self:service}/db/user~true}
     RDS_PASSWORD: ${ssm:/${self:provider.stage}/${self:service}/db/password~true}
     SENTRY_DSN: ${ssm:/${self:provider.stage}/${self:service}/sentry/dsn~true}
+  stackTags:
+    project: ${self:service}
+    environment: ${self:provider.stage}
   tags:
-    project: chi-bill-bot
+    project: ${self:service}
     environment: ${self:provider.stage}
   iamRoleStatements:
     - Effect: Allow
